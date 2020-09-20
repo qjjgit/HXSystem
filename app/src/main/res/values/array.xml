@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="unitArray">
+        <item>请选择</item>
+        <item>个</item>
+        <item>包</item>
+        <item>件</item>
+        <item>箱</item>
+        <item>条</item>
+        <item>罐</item>
+        <item>听</item>
+        <item>瓶</item>
+        <item>排</item>
+        <item>支</item>
+        <item>袋</item>
+        <item>副</item>
+        <item>提</item>
+        <item>盒</item>
+        <item>桶</item>
+        <item>斤</item>
+        <item>卷</item>
+    </string-array>
+</resources>
