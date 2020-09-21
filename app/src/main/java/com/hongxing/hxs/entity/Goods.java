@@ -1,5 +1,7 @@
 package com.hongxing.hxs.entity;
 
+import androidx.annotation.Nullable;
+
 public class Goods {
     private Integer id;
     private String name;
@@ -37,6 +39,20 @@ public class Goods {
                 ", price=" + price +
                 ", orig=" + orig +
                 '}';
+    }
+
+    @Override
+    public boolean equals(@Nullable Object obj) {
+        if (this==obj)return true;
+        if (obj==null)return false;
+        if (getClass()!=obj.getClass())return false;
+        Goods o = (Goods) obj;
+        if (!name.equals(o.getName()))return false;
+        if (!barcode.equals(o.getBarcode()))return false;
+        if (!unit.equals(o.getUnit()))return false;
+        if (!price.equals(o.getPrice()))return false;
+        if (!orig.equals(o.getOrig()))return false;
+        return true;
     }
 
     public Integer getId() {

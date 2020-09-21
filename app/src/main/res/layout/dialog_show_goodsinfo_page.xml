@@ -12,7 +12,7 @@
     <TextView
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
-        android:text="添加商品"
+        android:text="商品信息"
         android:textAlignment="center"
         android:textColor="#000"
         android:textSize="20sp"
@@ -35,7 +35,7 @@
             android:textSize="16sp" />
 
         <EditText
-            android:id="@+id/addGoods_name"
+            android:id="@+id/showGoods_name"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:background="@drawable/edit_background_cursor"
@@ -71,7 +71,7 @@
                 android:textSize="16sp" />
 
             <EditText
-                android:id="@+id/addGoods_barcode"
+                android:id="@+id/showGoods_barcode"
                 android:layout_width="wrap_content"
                 android:layout_height="match_parent"
                 android:background="@drawable/edit_background_cursor"
@@ -103,7 +103,7 @@
                 android:textSize="16sp" />
 
             <Spinner
-                android:id="@+id/addGoods_unitList"
+                android:id="@+id/showGoods_unitList"
                 android:layout_width="80dp"
                 android:layout_height="match_parent"
                 android:paddingTop="5dp"
@@ -143,7 +143,7 @@
                 android:textSize="16sp" />
 
             <EditText
-                android:id="@+id/addGoods_price"
+                android:id="@+id/showGoods_price"
                 android:layout_width="120dp"
                 android:layout_height="wrap_content"
                 android:background="@drawable/edit_background_cursor"
@@ -174,7 +174,7 @@
                 android:textSize="16sp" />
 
             <EditText
-                android:id="@+id/addGoods_orig"
+                android:id="@+id/showGoods_orig"
                 android:layout_width="120dp"
                 android:layout_height="wrap_content"
                 android:background="@drawable/edit_background_cursor"
@@ -197,21 +197,28 @@
         android:layout_marginTop="20dp"
         android:orientation="horizontal"
         tools:ignore="RtlHardcoded">
-
         <TextView
-            android:id="@+id/addGoods_cancel"
+            android:id="@+id/showGoods_PurchaseOrder"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginRight="25dp"
-            android:text="取消"
+            android:layout_marginRight="90dp"
+            android:text="查看进货单"
+            android:textColor="@color/colorAccent"
+            android:textSize="18sp" />
+        <TextView
+            android:id="@+id/showGoods_cancel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginRight="40dp"
+            android:text="返回"
             android:textColor="@color/colorAccent"
             android:textSize="18sp" />
 
         <TextView
-            android:id="@+id/addGoods_sure"
+            android:id="@+id/showGoods_sure"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="确定"
+            android:text="提交修改"
             android:textColor="@color/colorAccent"
             android:textSize="18sp" />
     </LinearLayout>

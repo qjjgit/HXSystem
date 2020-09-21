@@ -5,29 +5,24 @@ import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.database.sqlite.SQLiteDatabase;
 import android.os.Build;
 import android.os.Bundle;
-import android.text.Editable;
 import android.text.TextUtils;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
 import android.widget.EditText;
-import android.widget.ListAdapter;
-import android.widget.ListView;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.android.material.bottomnavigation.BottomNavigationView;
-import com.hongxing.hxs.db.DBManager;
 import com.hongxing.hxs.entity.Goods;
 import com.hongxing.hxs.service.CrudService;
 import com.hongxing.hxs.ui.dialog.ScanResultDialog;
+import com.hongxing.hxs.utils.GoodsUtils;
 import com.huawei.hms.hmsscankit.ScanUtil;
 import com.huawei.hms.ml.scan.HmsScan;
 import com.huawei.hms.ml.scan.HmsScanAnalyzerOptions;
@@ -41,7 +36,6 @@ import androidx.navigation.ui.NavigationUI;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Objects;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -139,8 +133,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void showAddGoodsPage(){
-        AlertDialog.Builder builder= new AlertDialog.Builder(MainActivity.this);
-        View view= LayoutInflater.from(MainActivity.this).inflate(R.layout.dialog_add_goods_page, null);
+        View view= LayoutInflater.from(this).inflate(R.layout.dialog_add_goods_page, null);
         final TextView cancel =view.findViewById(R.id.addGoods_cancel);
         final TextView sure =view.findViewById(R.id.addGoods_sure);
         final EditText eText_name =view.findViewById(R.id.addGoods_name);
@@ -148,6 +141,7 @@ public class MainActivity extends AppCompatActivity {
         final TextView tView_barcode=view.findViewById(R.id.addGoods_barcode);
         final EditText eText_price =view.findViewById(R.id.addGoods_price);
         final EditText eText_orig =view.findViewById(R.id.addGoods_orig);
+        AlertDialog.Builder builder= new AlertDialog.Builder(MainActivity.this);
         final Dialog dialog= builder.create();
         dialog.show();
         dialog.getWindow().setContentView(view);
@@ -188,59 +182,59 @@ public class MainActivity extends AppCompatActivity {
                 map.put("unit",goods.getUnit());
                 map.put("price",eText_price.getText().toString());
                 map.put("orig",eText_orig.getText().toString());
-                boolean ok = checkAddGoodsInfo(map);
+                boolean ok = GoodsUtils.checkGoodsInfo(MainActivity.this,goods,map,GoodsUtils.DO_ADD);
                 if (ok) dialog.dismiss();
             }
         });
     }
 
-    public boolean checkAddGoodsInfo(HashMap<String,String> map) {
-        ArrayList<String> list = new ArrayList<>();
-        CrudService service = new CrudService(this);
-        if ("".equals(map.get("name"))){
-            list.add(" 商品名称不能为空！");
-        }else goods.setName(map.get("name"));
-        if ("".equals(map.get("barcode"))){
-            goods.setBarcode("无");
-        }else{
-            if (map.get("barcode").length()!=13)
-                list.add(" 请输入正确的13位商品条码！");
-            goods.setBarcode(map.get("barcode"));
-        }
-        if ("请选择".equals(map.get("unit"))){
-            list.add(" 请选择商品单位！");
-        }else goods.setUnit(map.get("unit"));
-        if ("".equals(map.get("price"))){
-            list.add(" 商品售价不能为空！");
-        }else goods.setPrice(Float.valueOf(Objects.requireNonNull(map.get("price"))));
-        if ("".equals(map.get("orig"))){
-            map.put("orig","0.00");
-        }goods.setOrig(Float.valueOf(Objects.requireNonNull(map.get("orig"))));
-
-        AlertDialog.Builder dialog = new AlertDialog.Builder(this);
-        dialog.setTitle("提示");
-        dialog.setIcon(R.drawable.error);
-        if(!list.isEmpty()){
-            dialog.setMessage(list.get(0));
-            dialog.show();
-            service.close();
-            return false;
-        }else{
-            String name = map.get("name");
-            String unit = map.get("unit");
-            boolean exist = service.existGoodsByNameAndUnit(name,map.get("unit"));
-            if (exist){
-                dialog.setMessage("已存在名称为 “"+name+"” 且单位为 “"+unit+"” 的商品,请勿重复添加！");
-                dialog.show();
-                service.close();
-                return false;
-            }
-        }
-        service.save(goods);
-        Toast.makeText(MainActivity.this, "添加成功！", Toast.LENGTH_LONG).show();
-        service.close();
-        return true;
-    }
+//    public boolean checkAddGoodsInfo(HashMap<String,String> map) {
+//        ArrayList<String> list = new ArrayList<>();
+//        CrudService service = new CrudService(this);
+//        if ("".equals(map.get("name"))){
+//            list.add(" 商品名称不能为空！");
+//        }else goods.setName(map.get("name"));
+//        if ("".equals(map.get("barcode"))){
+//            goods.setBarcode("无");
+//        }else{
+//            if (map.get("barcode").length()!=13)
+//                list.add(" 请输入正确的13位商品条码！");
+//            goods.setBarcode(map.get("barcode"));
+//        }
+//        if ("请选择".equals(map.get("unit"))){
+//            list.add(" 请选择商品单位！");
+//        }else goods.setUnit(map.get("unit"));
+//        if ("".equals(map.get("price"))){
+//            list.add(" 商品售价不能为空！");
+//        }else goods.setPrice(Float.valueOf(Objects.requireNonNull(map.get("price"))));
+//        if ("".equals(map.get("orig"))){
+//            map.put("orig","0.00");
+//        }goods.setOrig(Float.valueOf(Objects.requireNonNull(map.get("orig"))));
+//
+//        AlertDialog.Builder dialog = new AlertDialog.Builder(this);
+//        dialog.setTitle("提示");
+//        dialog.setIcon(R.drawable.error);
+//        if(!list.isEmpty()){
+//            dialog.setMessage(list.get(0));
+//            dialog.show();
+//            service.close();
+//            return false;
+//        }else{
+//            String name = map.get("name");
+//            String unit = map.get("unit");
+//            boolean exist = service.existGoodsByNameAndUnit(name,map.get("unit"));
+//            if (exist){
+//                dialog.setMessage("已存在名称为 “"+name+"” 且单位为 “"+unit+"” 的商品,请勿重复添加！");
+//                dialog.show();
+//                service.close();
+//                return false;
+//            }
+//        }
+//        service.save(goods);
+//        Toast.makeText(MainActivity.this, "添加成功！", Toast.LENGTH_LONG).show();
+//        service.close();
+//        return true;
+//    }
     /*
      * 回退按钮两次退出
      */

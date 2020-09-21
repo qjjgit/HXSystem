@@ -44,7 +44,7 @@
             android:padding="5dp" />
     </LinearLayout>
 
-<!--    条码and单位-->
+    <!--    条码and单位-->
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
@@ -97,7 +97,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                    android:layout_marginTop="5dp"
+                android:layout_marginTop="5dp"
                 android:layout_marginBottom="10dp"
                 android:text="单 位"
                 android:textSize="16sp" />
@@ -115,7 +115,7 @@
         </LinearLayout>
     </androidx.constraintlayout.widget.ConstraintLayout>
 
-<!--    售价and进货价-->
+    <!--    售价and进货价-->
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
