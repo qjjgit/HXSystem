@@ -6,16 +6,39 @@
     android:layout_height="match_parent"
     android:orientation="vertical"
     >
-    <Button
-        android:id="@+id/btn_add"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="5dp"
-        android:layout_marginBottom="3dp"
-        android:layout_marginEnd="10dp"
-        android:onClick="addGoodsClick"
-        android:layout_gravity="end"
-        android:text="添加商品"/>
+    <androidx.constraintlayout.widget.ConstraintLayout
+    android:layout_width="fill_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+        >
+
+        <EditText
+            android:id="@+id/text_search"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:hint="输入名称或条码"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <Button
+            android:id="@+id/btn_search"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="查找"
+            app:layout_constraintStart_toEndOf="@+id/text_search"
+            app:layout_constraintTop_toTopOf="@+id/text_search" />
+
+        <Button
+            android:id="@+id/btn_add"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="8dp"
+            android:onClick="addGoodsClick"
+            android:text="添加商品"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="@+id/btn_search" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
 
 <!--    固定表头位置-->
     <LinearLayout

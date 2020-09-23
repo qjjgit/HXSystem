@@ -197,12 +197,14 @@
         android:layout_marginTop="20dp"
         android:orientation="horizontal"
         tools:ignore="RtlHardcoded">
+
         <TextView
             android:id="@+id/showGoods_PurchaseOrder"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginRight="90dp"
-            android:text="查看进货单"
+            android:layout_marginRight="80dp"
+            android:text="查看\n进货单"
+            android:textAlignment="center"
             android:textColor="@color/colorAccent"
             android:textSize="18sp" />
         <TextView

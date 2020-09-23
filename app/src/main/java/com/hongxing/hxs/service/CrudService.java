@@ -46,10 +46,9 @@ public class CrudService {
 
     //修改数据的方法
     public void update(Goods goods) {
-//        SQLiteDatabase db=databaseHelper.getWritableDatabase();
-        String sql = "update goodsdata set name=? ,unit=?,price=?,orig=? where id=?";
+        String sql = "update goodsdata set name=?,barcode=? ,unit=?,price=?,orig=? where id=?";
         db.execSQL(sql,new Object[]{
-                goods.getName(),goods.getUnit(),goods.getPrice(),goods.getOrig(),goods.getId()});
+                goods.getName(),goods.getBarcode(),goods.getUnit(),goods.getPrice(),goods.getOrig(),goods.getId()});
         db.close();
     }
 
@@ -102,19 +101,19 @@ public class CrudService {
     }
 
     //查询分页数据的方法
-    public List<Goods> findByPage(int min,int page) {
-        List<Goods> list = new ArrayList<>();
+    public ArrayList<Goods> findByPage(int min,int page) {
+        ArrayList<Goods> list = new ArrayList<>();
 //        SQLiteDatabase db=databaseHelper.getReadableDatabase();
         String sql = "select * from goodsdata limit ?,?";
         Cursor cursor= db.rawQuery(sql,new String[]{String.valueOf(min),String.valueOf(page)});
         while(cursor.moveToNext()){
-            int id2 =cursor.getInt(cursor.getColumnIndex("id"));
+            int id =cursor.getInt(cursor.getColumnIndex("id"));
             String name=cursor.getString(cursor.getColumnIndex("name"));
             String barcode=cursor.getString(cursor.getColumnIndex("barcode"));
             String unit=cursor.getString(cursor.getColumnIndex("unit"));
             float price=cursor.getFloat(cursor.getColumnIndex("price"));
             float orig=cursor.getFloat(cursor.getColumnIndex("orig"));
-            list.add(new Goods(id2,name,barcode,unit,price,orig));
+            list.add(new Goods(id,name,barcode,unit,price,orig));
         }
 //        db.close();
         return list;

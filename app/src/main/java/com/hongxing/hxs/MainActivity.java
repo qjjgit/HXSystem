@@ -7,6 +7,7 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Looper;
 import android.text.TextUtils;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
@@ -34,13 +35,12 @@ import androidx.navigation.ui.AppBarConfiguration;
 import androidx.navigation.ui.NavigationUI;
 
 import java.io.UnsupportedEncodingException;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Objects;
 import java.util.Timer;
 import java.util.TimerTask;
 
 public class MainActivity extends AppCompatActivity {
+
     public static final int DEFAULT_VIEW = 0x22;
 
     private static final int REQUEST_CODE_SCAN = 0X01;
@@ -182,7 +182,7 @@ public class MainActivity extends AppCompatActivity {
                 map.put("unit",goods.getUnit());
                 map.put("price",eText_price.getText().toString());
                 map.put("orig",eText_orig.getText().toString());
-                boolean ok = GoodsUtils.checkGoodsInfo(MainActivity.this,goods,map,GoodsUtils.DO_ADD);
+                boolean ok = GoodsUtils.checkGoodsInfoForAction(MainActivity.this,goods,map,GoodsUtils.DO_ADD);
                 if (ok) dialog.dismiss();
             }
         });
