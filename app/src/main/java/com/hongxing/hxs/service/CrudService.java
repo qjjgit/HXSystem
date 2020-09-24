@@ -7,10 +7,10 @@ import android.database.sqlite.SQLiteDatabase;
 
 import com.hongxing.hxs.db.DBManager;
 import com.hongxing.hxs.entity.Goods;
+import com.hongxing.hxs.entity.PurchaseOrder;
 
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
-import java.util.List;
 
 public class CrudService {
 //    private DatabaseHelper databaseHelper;
@@ -28,12 +28,17 @@ public class CrudService {
     }
 
     //增加数据的方法
-    public void save(Goods goods){
+    public void saveGoods(Goods goods){
 //        SQLiteDatabase db= DBManager.openDatabase()//获取数据实体//写方法//会判断是否数据库已经满了
         String sql="insert into goodsdata('name','barcode','unit','price','orig') values(?,?,?,?,?)";
 //        byte[] bytes = goods.getName().getBytes();
 //        String name = new String(bytes, "GBK");
         db.execSQL(sql, new Object[]{goods.getName(),goods.getBarcode(),goods.getUnit(),goods.getPrice(),goods.getOrig()});//执行sql语句？由数组提供
+    }
+
+    public void savePurchaseOrder(PurchaseOrder purchaseOrder){
+        String sql="insert into purOrder('date','data') values(?,?)";
+        db.execSQL(sql,new Object[]{purchaseOrder.getDate(),purchaseOrder.getData()});
     }
 
     //删除数据的方法
@@ -45,7 +50,7 @@ public class CrudService {
     }
 
     //修改数据的方法
-    public void update(Goods goods) {
+    public void updateGoods(Goods goods) {
         String sql = "update goodsdata set name=?,barcode=? ,unit=?,price=?,orig=? where id=?";
         db.execSQL(sql,new Object[]{
                 goods.getName(),goods.getBarcode(),goods.getUnit(),goods.getPrice(),goods.getOrig(),goods.getId()});
@@ -101,11 +106,13 @@ public class CrudService {
     }
 
     //查询分页数据的方法
-    public ArrayList<Goods> findByPage(int min,int page) {
+    public ArrayList<Goods> findByPage(int min,int page,String word) {
         ArrayList<Goods> list = new ArrayList<>();
-//        SQLiteDatabase db=databaseHelper.getReadableDatabase();
-        String sql = "select * from goodsdata limit ?,?";
-        Cursor cursor= db.rawQuery(sql,new String[]{String.valueOf(min),String.valueOf(page)});
+        StringBuffer sql =new StringBuffer("select * from goodsdata ");
+        if (word!=null&&!"".equals(word)){
+            sql.append("where name like \"%").append(word).append("%\" or barcode = ").append(word);
+        }sql.append(" limit ?,?");
+        Cursor cursor= db.rawQuery(String.valueOf(sql),new String[]{String.valueOf(min), String.valueOf(page)});
         while(cursor.moveToNext()){
             int id =cursor.getInt(cursor.getColumnIndex("id"));
             String name=cursor.getString(cursor.getColumnIndex("name"));

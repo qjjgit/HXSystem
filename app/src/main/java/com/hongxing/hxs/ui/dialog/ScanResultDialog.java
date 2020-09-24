@@ -32,8 +32,5 @@ public class ScanResultDialog extends Activity {
         orig.setText("****元");
     }
 
-    public void showOrig(View view){
-        TextView textView = findViewById(R.id.orig);
-        textView.setText((MainActivity.goods.getOrig().toString()+"元"));
-    }
+
 }

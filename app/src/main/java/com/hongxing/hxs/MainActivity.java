@@ -1,13 +1,16 @@
 package com.hongxing.hxs;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Looper;
+import android.provider.MediaStore;
 import android.text.TextUtils;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
@@ -21,8 +24,8 @@ import android.widget.Toast;
 
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.hongxing.hxs.entity.Goods;
+import com.hongxing.hxs.entity.PurchaseOrder;
 import com.hongxing.hxs.service.CrudService;
-import com.hongxing.hxs.ui.dialog.ScanResultDialog;
 import com.hongxing.hxs.utils.GoodsUtils;
 import com.huawei.hms.hmsscankit.ScanUtil;
 import com.huawei.hms.ml.scan.HmsScan;
@@ -34,6 +37,8 @@ import androidx.navigation.Navigation;
 import androidx.navigation.ui.AppBarConfiguration;
 import androidx.navigation.ui.NavigationUI;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.HashMap;
 import java.util.Timer;
@@ -42,8 +47,8 @@ import java.util.TimerTask;
 public class MainActivity extends AppCompatActivity {
 
     public static final int DEFAULT_VIEW = 0x22;
-
     private static final int REQUEST_CODE_SCAN = 0X01;
+    private static final int REQUEST_CODE_SHOOT = 0X02;
 
     private static boolean isQuit = false;
     private Timer timer = new Timer();
@@ -111,25 +116,73 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         }
+
+        if (requestCode == REQUEST_CODE_SHOOT){
+            Bundle bundle = data.getExtras();
+            Bitmap bitmap = (Bitmap) bundle.get("data"); //将data中的信息流解析为Bitmap类型
+            //iv_pic.setImageBitmap(bitmap);// 显示图片
+            //将图片转化为位图
+            int size = bitmap.getWidth() * bitmap.getHeight() * 4;
+            //int size = 20 * 30 * 4;
+            //创建一个字节数组输出流,流的大小为size
+
+            ByteArrayOutputStream baos= new ByteArrayOutputStream(size);
+            try {
+                //设置位图的压缩格式，质量为100%，并放入字节数组输出流中
+                bitmap.compress(Bitmap.CompressFormat.PNG, 100, baos);
+                //将字节数组输出流转化为字节数组byte[]
+                byte[] imagedata = baos.toByteArray();
+                PurchaseOrder purchaseOrder = new PurchaseOrder();
+                purchaseOrder.setData(imagedata);
+//                dbop.insert(d);
+            }catch (Exception e){
+                e.printStackTrace();
+            }finally {
+                try {
+                    //bitmap.recycle();
+                    baos.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
     }
 
     public void setThisGoodsByBarcode(String barcode) throws UnsupportedEncodingException {
-        CrudService crudService=new CrudService(this);
-        goods=crudService.findByBarcode(barcode);
+        CrudService service=new CrudService(this);
+        goods=service.findByBarcode(barcode);
+        service.close();
         if(goods==null){
             Toast.makeText(this, "没有录入与"+barcode+"对应的商品！", Toast.LENGTH_SHORT).show();
             goods=new Goods();
             goods.setBarcode(barcode);
             showAddGoodsPage();
         }else{
-            Intent intent = new Intent(MainActivity.this, ScanResultDialog.class);
-            startActivity(intent);
+//            Intent intent = new Intent(MainActivity.this, ScanResultDialog.class);
+//            startActivity(intent);
+            showScanResultPage();
         }
     }
 
     public void addGoodsClick(View v){
         if (goods==null)goods=new Goods();
         showAddGoodsPage();
+    }
+
+    public void showScanResultPage(){
+        View view= LayoutInflater.from(this).inflate(R.layout.dialog_scan_result, null);
+        ((TextView)view.findViewById(R.id.goodsName)).setText(goods.getName());
+        ((TextView)view.findViewById(R.id.barcode)).setText(goods.getBarcode());
+        ((TextView)view.findViewById(R.id.unit)).setText(goods.getUnit());
+        ((TextView)view.findViewById(R.id.price)).setText((goods.getPrice() +"元"));
+        ((TextView)view.findViewById(R.id.orig)).setText("****元");
+        AlertDialog.Builder builder= new AlertDialog.Builder(MainActivity.this);
+        final Dialog dialog= builder.create();
+        dialog.show();
+        dialog.getWindow().setContentView(view);
+    }
+    public void showOrig(View view){
+        ((TextView)findViewById(R.id.orig)).setText((goods.getOrig().toString()+"元"));
     }
 
     public void showAddGoodsPage(){
@@ -188,53 +241,22 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-//    public boolean checkAddGoodsInfo(HashMap<String,String> map) {
-//        ArrayList<String> list = new ArrayList<>();
-//        CrudService service = new CrudService(this);
-//        if ("".equals(map.get("name"))){
-//            list.add(" 商品名称不能为空！");
-//        }else goods.setName(map.get("name"));
-//        if ("".equals(map.get("barcode"))){
-//            goods.setBarcode("无");
-//        }else{
-//            if (map.get("barcode").length()!=13)
-//                list.add(" 请输入正确的13位商品条码！");
-//            goods.setBarcode(map.get("barcode"));
-//        }
-//        if ("请选择".equals(map.get("unit"))){
-//            list.add(" 请选择商品单位！");
-//        }else goods.setUnit(map.get("unit"));
-//        if ("".equals(map.get("price"))){
-//            list.add(" 商品售价不能为空！");
-//        }else goods.setPrice(Float.valueOf(Objects.requireNonNull(map.get("price"))));
-//        if ("".equals(map.get("orig"))){
-//            map.put("orig","0.00");
-//        }goods.setOrig(Float.valueOf(Objects.requireNonNull(map.get("orig"))));
-//
-//        AlertDialog.Builder dialog = new AlertDialog.Builder(this);
-//        dialog.setTitle("提示");
-//        dialog.setIcon(R.drawable.error);
-//        if(!list.isEmpty()){
-//            dialog.setMessage(list.get(0));
-//            dialog.show();
-//            service.close();
-//            return false;
-//        }else{
-//            String name = map.get("name");
-//            String unit = map.get("unit");
-//            boolean exist = service.existGoodsByNameAndUnit(name,map.get("unit"));
-//            if (exist){
-//                dialog.setMessage("已存在名称为 “"+name+"” 且单位为 “"+unit+"” 的商品,请勿重复添加！");
-//                dialog.show();
-//                service.close();
-//                return false;
-//            }
-//        }
-//        service.save(goods);
-//        Toast.makeText(MainActivity.this, "添加成功！", Toast.LENGTH_LONG).show();
-//        service.close();
-//        return true;
-//    }
+    public void showPurchaseOrder(View v){
+        View view= LayoutInflater.from(this).inflate(R.layout.purchaseorder_page, null);
+        view.setMinimumWidth(360);
+        view.setMinimumHeight(480);
+        AlertDialog.Builder builder= new AlertDialog.Builder(MainActivity.this);
+        final Dialog dialog= builder.create();
+        dialog.show();
+        dialog.getWindow().setContentView(view);
+    }
+
+    public void addPurOrder(View view){
+        Intent intent = new Intent();
+        intent.setAction(MediaStore.ACTION_IMAGE_CAPTURE); //设置动作为调用照相机
+        startActivityForResult(intent, REQUEST_CODE_SHOOT);
+    }
+
     /*
      * 回退按钮两次退出
      */

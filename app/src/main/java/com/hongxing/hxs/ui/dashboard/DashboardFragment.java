@@ -9,6 +9,7 @@ import android.graphics.Color;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
+import android.util.AttributeSet;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -34,6 +35,7 @@ import com.hongxing.hxs.service.CrudService;
 import com.hongxing.hxs.utils.GoodsUtils;
 
 import java.lang.reflect.Array;
+import java.text.AttributedString;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -49,12 +51,6 @@ public class DashboardFragment extends Fragment {
     private ArrayList<Goods> tableBodyDataList;
     private DashboardViewModel dashboardViewModel;
     final Handler uiHandler=new Handler();
-    final Runnable runnable = new Runnable() {
-        @Override
-        public void run() {
-            initData();
-        }
-    };
 
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container, Bundle savedInstanceState) {
@@ -67,7 +63,15 @@ public class DashboardFragment extends Fragment {
             public void onChanged(@Nullable String s) {
             tableHeader=root.findViewById(R.id.MyTableHeader);
             tableBody=root.findViewById(R.id.MyTable);
-            root.findViewById(R.id.btn_search);// TODO: 2020/9/23  
+                final EditText searchTextV = root.findViewById(R.id.btn_search);
+                searchTextV.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                String str = (searchTextV.getText().toString()).replace(" ","");
+                searchTextV.setText(str);
+                doSearch(str);
+                }
+            });
             AsynchronousLoading();
             }
         });
@@ -86,7 +90,8 @@ public class DashboardFragment extends Fragment {
                 boolean post = uiHandler.post(new Runnable() {
                     @Override
                     public void run() {
-                        initData();
+                        initTableHeader();
+                        LoadData(null);
                     }
                 });
                 if (post){
@@ -103,7 +108,7 @@ public class DashboardFragment extends Fragment {
         t.start();
     }
 
-    private void initData(){
+    private void initTableHeader(){
         relativeLayout=(RelativeLayout)LayoutInflater.from(this.getContext()).inflate(R.layout.table,null);
         MyTableTextView title=relativeLayout.findViewById(R.id.list_1_1);
         title.setText(tableHeaderTexts[0]);
@@ -127,9 +132,22 @@ public class DashboardFragment extends Fragment {
         setOnClick(title);
         /*表头*/
         tableHeader.addView(relativeLayout);
+    }
+
+    private void LoadData(String searchWord){
         final CrudService service = new CrudService(getContext());
-        tableBodyDataList = service.findByPage(0, service.getCount());
+        tableBodyDataList = service.findByPage(0, service.getCount(),searchWord);
         service.close();
+        if(tableBodyDataList.size()<1){
+            TextView child = new TextView(getContext());
+            child.setTextSize(20);
+            child.setWidth(360);
+            child.setPadding(10,20,0,0);
+            child.setTextAlignment(View.TEXT_ALIGNMENT_CENTER);
+            child.setText("没有查询到相关商品！");
+            tableBody.addView(child);
+            return;
+        }
         for(int i=0;i<tableBodyDataList.size();i++){
             relativeLayout=(RelativeLayout) LayoutInflater.from(this.getContext()).inflate(R.layout.table,null);
             int color = Color.parseColor("#ffffff");
@@ -152,11 +170,11 @@ public class DashboardFragment extends Fragment {
             tableBodyList.add(new ArrayList<MyTableTextView>(){{
                 add(col1);add(col2);add(col3);add(col4);add(col5);
             }});
-            final int finalI = i;
+            final int rowNumber = i;
             relativeLayout.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View view) {
-                 showGoodsInfoPage(finalI);
+                 showGoodsInfoPage(rowNumber);
                 }
             });
             tableBody.addView(relativeLayout);
@@ -166,7 +184,7 @@ public class DashboardFragment extends Fragment {
     private void setOnClick(MyTableTextView view){
         view.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onClick(View view) {
+            public void onClick(View view) {// TODO: 2020/9/24 点击表头实现排序
                 switch (view.getId()){
                     case R.id.list_1_1:
                         Toast.makeText(getContext(),"点击了序号",Toast.LENGTH_SHORT).show();
@@ -186,6 +204,29 @@ public class DashboardFragment extends Fragment {
                 }
             }
         });
+    }
+
+    private void doSearch(String searchWord){
+        if(searchWord.length()==1){
+            Toast.makeText(getContext(),"至少输入2位字符进行搜索！",Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if ("".equals(searchWord)){
+            CrudService service = new CrudService(getContext());
+            int count = service.getCount();
+            service.close();
+            if(tableBodyDataList.size()== count){
+            Toast.makeText(getContext(),"请先输入关键词再进行搜索！",Toast.LENGTH_SHORT).show();
+            }else{
+                tableHeader.removeAllViews();
+                tableBody.removeAllViews();
+                tableBodyList.clear();
+                AsynchronousLoading();
+            }return;
+        }
+        tableBody.removeAllViews();
+        tableBodyList.clear();
+        LoadData(searchWord);
     }
 
     synchronized private void showGoodsInfoPage(final int rowNumber){

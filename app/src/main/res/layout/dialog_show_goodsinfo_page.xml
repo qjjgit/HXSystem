@@ -187,13 +187,11 @@
         </LinearLayout>
     </androidx.constraintlayout.widget.ConstraintLayout>
 
-    <!--    取消or确认-->
-    <LinearLayout
-        android:layout_width="wrap_content"
+    <!--    查看进货单or取消or确认-->
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="fill_parent"
         android:layout_height="wrap_content"
-        android:layout_gravity="right"
         android:layout_marginBottom="20dp"
-        android:layout_marginRight="10dp"
         android:layout_marginTop="20dp"
         android:orientation="horizontal"
         tools:ignore="RtlHardcoded">
@@ -202,27 +200,36 @@
             android:id="@+id/showGoods_PurchaseOrder"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginRight="80dp"
+            android:layout_marginStart="8dp"
             android:text="查看\n进货单"
             android:textAlignment="center"
             android:textColor="@color/colorAccent"
-            android:textSize="18sp" />
+            android:textSize="18sp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
         <TextView
             android:id="@+id/showGoods_cancel"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginRight="40dp"
+            android:layout_marginEnd="40dp"
             android:text="返回"
             android:textColor="@color/colorAccent"
-            android:textSize="18sp" />
+            android:textSize="20sp"
+            app:layout_constraintEnd_toStartOf="@+id/showGoods_sure"
+            app:layout_constraintTop_toTopOf="@+id/showGoods_sure" />
 
         <TextView
             android:id="@+id/showGoods_sure"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_marginEnd="8dp"
             android:text="提交修改"
             android:textColor="@color/colorAccent"
-            android:textSize="18sp" />
-    </LinearLayout>
+            android:textSize="20sp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
 </LinearLayout>

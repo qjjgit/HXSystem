@@ -23,7 +23,7 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".ui.dialog.ScanResultDialog"
-            android:theme="@style/Theme.AppCompat.DayNight.Dialog"/>
+<!--        <activity android:name=".ui.dialog.ScanResultDialog"-->
+<!--            android:theme="@style/Theme.AppCompat.DayNight.Dialog"/>-->
     </application>
 </manifest>

@@ -7,61 +7,36 @@
     android:orientation="vertical"
     >
     <androidx.constraintlayout.widget.ConstraintLayout
-    android:layout_width="fill_parent"
-    android:layout_height="wrap_content"
-    android:orientation="horizontal"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
         >
 
-        <EditText
-            android:id="@+id/text_search"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:maxLength="15"
-            android:hint="输入名称或条码"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
-
         <Button
-            android:id="@+id/btn_search"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="查找"
-            app:layout_constraintStart_toEndOf="@+id/text_search"
-            app:layout_constraintTop_toTopOf="@+id/text_search" />
-
-        <Button
-            android:id="@+id/btn_add"
+            android:id="@+id/btn_addPurOrder"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginEnd="8dp"
-            android:onClick="addGoodsClick"
-            android:text="添加商品"
+            android:onClick="addPurOrder"
+            android:text="添加进货单"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="@+id/btn_search" />
+            app:layout_constraintTop_toTopOf="parent" />
     </androidx.constraintlayout.widget.ConstraintLayout>
 
-
-<!--    固定表头位置-->
-    <LinearLayout
-        android:id="@+id/MyTableHeader"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:orientation="vertical">
-    </LinearLayout>
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:fillViewport="true"
         android:scrollbars="none">
         <HorizontalScrollView
-            android:id="@+id/scroll_view"
+            android:id="@+id/scroll_PurOrderView"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:scrollbarAlwaysDrawHorizontalTrack="false"
             android:scrollbars="none">
 
             <LinearLayout
-                android:id="@+id/MyTable"
+                android:id="@+id/purOrder"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="5dp"

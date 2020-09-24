@@ -66,13 +66,13 @@ public class GoodsUtils{
             }
             switch (action){
                 case DO_ADD:{
-                    service.save(goods);
+                    service.saveGoods(goods);
                     Toast.makeText(context, "添加成功！", Toast.LENGTH_LONG).show();
                     service.close();
                     return true;
                 }
                 case DO_UPDATE:{
-                    service.update(goods);
+                    service.updateGoods(goods);
                     Toast.makeText(context, "商品信息更新成功！", Toast.LENGTH_LONG).show();
                     service.close();
                     return true;
