@@ -40,7 +40,7 @@
             android:layout_height="match_parent"
             android:background="@drawable/edit_background_cursor"
             android:inputType="text"
-            android:maxLength="15"
+            android:maxLength="20"
             android:padding="5dp" />
     </LinearLayout>
 
@@ -202,6 +202,7 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
             android:text="查看\n进货单"
+            android:onClick="showPurchaseOrderPage"
             android:textAlignment="center"
             android:textColor="@color/colorAccent"
             android:textSize="18sp"

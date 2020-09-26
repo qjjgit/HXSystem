@@ -69,7 +69,7 @@
         android:layout_marginBottom="16dp"
         android:text="进货价："
         android:textSize="24sp"
-        app:layout_constraintBottom_toTopOf="@+id/button"
+        app:layout_constraintBottom_toTopOf="@+id/btn_showPurOrder"
         app:layout_constraintStart_toStartOf="@+id/textView5"
         app:layout_constraintTop_toBottomOf="@+id/textView5" />
 
@@ -96,7 +96,6 @@
         android:id="@+id/orig"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:onClick="showOrig"
         android:textSize="24sp"
         app:layout_constraintEnd_toEndOf="@+id/barcode"
         app:layout_constraintTop_toTopOf="@+id/textView6" />
@@ -127,7 +126,7 @@
         android:layout_marginBottom="16dp"
         android:textSize="18sp"
         android:text="查看\n进货单"
-        android:onClick="showPurchaseOrder"
+        android:onClick="showPurchaseOrderPage"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 

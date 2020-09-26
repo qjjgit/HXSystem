@@ -1,15 +1,11 @@
 package com.hongxing.hxs.ui.dashboard;
 
-import android.annotation.SuppressLint;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.app.ProgressDialog;
-import android.content.DialogInterface;
 import android.graphics.Color;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
-import android.util.AttributeSet;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -34,12 +30,8 @@ import com.hongxing.hxs.entity.Goods;
 import com.hongxing.hxs.service.CrudService;
 import com.hongxing.hxs.utils.GoodsUtils;
 
-import java.lang.reflect.Array;
-import java.text.AttributedString;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
-import java.util.List;
 
 public class DashboardFragment extends Fragment {
 
@@ -63,12 +55,14 @@ public class DashboardFragment extends Fragment {
             public void onChanged(@Nullable String s) {
             tableHeader=root.findViewById(R.id.MyTableHeader);
             tableBody=root.findViewById(R.id.MyTable);
-                final EditText searchTextV = root.findViewById(R.id.btn_search);
-                searchTextV.setOnClickListener(new View.OnClickListener() {
+                final EditText searchTextV = root.findViewById(R.id.text_search);
+                (root.findViewById(R.id.btn_search))
+                .setOnClickListener(new View.OnClickListener() {
                 @Override
-                public void onClick(View view) {
+                public void onClick(View view) {// TODO: 2020/9/25 中文关键词闪退
                 String str = (searchTextV.getText().toString()).replace(" ","");
                 searchTextV.setText(str);
+                searchTextV.setSelection(str.length());
                 doSearch(str);
                 }
             });
@@ -141,7 +135,7 @@ public class DashboardFragment extends Fragment {
         if(tableBodyDataList.size()<1){
             TextView child = new TextView(getContext());
             child.setTextSize(20);
-            child.setWidth(360);
+            child.setWidth(400);
             child.setPadding(10,20,0,0);
             child.setTextAlignment(View.TEXT_ALIGNMENT_CENTER);
             child.setText("没有查询到相关商品！");
@@ -244,6 +238,7 @@ public class DashboardFragment extends Fragment {
         dialog.getWindow().setContentView(view);
         dialog.setCancelable(false);
         final Goods goods = tableBodyDataList.get(rowNumber);
+        MainActivity.goods=goods;
         eText_name.setText(goods.getName());
         eText_name.setSelection(goods.getName().length());
         tView_barcode.setText(goods.getBarcode());

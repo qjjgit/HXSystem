@@ -1,17 +1,19 @@
 package com.hongxing.hxs.entity;
 
 import java.util.Arrays;
-import java.util.Date;
 
 public class PurchaseOrder {
-    private Integer id;
-    private Date date;
+    private String id;
+    private String supplier;
+    private String date;
     private byte[] data;
 
     public PurchaseOrder() {
     }
 
-    public PurchaseOrder(Date date, byte[] data) {
+    public PurchaseOrder(String id, String supplier, String date, byte[] data) {
+        this.id = id;
+        this.supplier = supplier;
         this.date = date;
         this.data = data;
     }
@@ -19,25 +21,34 @@ public class PurchaseOrder {
     @Override
     public String toString() {
         return "PurchaseOrder{" +
-                "id=" + id +
-                ", date=" + date +
+                "id='" + id + '\'' +
+                ", supplier='" + supplier + '\'' +
+                ", date='" + date + '\'' +
                 ", data=" + Arrays.toString(data) +
                 '}';
     }
 
-    public Integer getId() {
+    public String getId() {
         return id;
     }
 
-    public void setId(Integer id) {
+    public void setId(String id) {
         this.id = id;
     }
 
-    public Date getDate() {
+    public String getSupplier() {
+        return supplier;
+    }
+
+    public void setSupplier(String supplier) {
+        this.supplier = supplier;
+    }
+
+    public String getDate() {
         return date;
     }
 
-    public void setDate(Date date) {
+    public void setDate(String date) {
         this.date = date;
     }
 

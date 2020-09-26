@@ -4,6 +4,8 @@ import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
 
+import java.util.UUID;
+
 public class NotificationsViewModel extends ViewModel {
 
     private MutableLiveData<String> mText;

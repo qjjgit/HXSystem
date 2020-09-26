@@ -10,7 +10,10 @@ import com.hongxing.hxs.entity.Goods;
 import com.hongxing.hxs.entity.PurchaseOrder;
 
 import java.io.UnsupportedEncodingException;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 
 public class CrudService {
 //    private DatabaseHelper databaseHelper;
@@ -36,9 +39,26 @@ public class CrudService {
         db.execSQL(sql, new Object[]{goods.getName(),goods.getBarcode(),goods.getUnit(),goods.getPrice(),goods.getOrig()});//执行sql语句？由数组提供
     }
 
-    public void savePurchaseOrder(PurchaseOrder purchaseOrder){
-        String sql="insert into purOrder('date','data') values(?,?)";
-        db.execSQL(sql,new Object[]{purchaseOrder.getDate(),purchaseOrder.getData()});
+    public void savePurchaseOrder(int goodsId,PurchaseOrder purchaseOrder){
+        String sql1="insert into pur_order('id','supplier','date','data') values(?,?,?,?)";
+        db.execSQL(sql1,new Object[]{purchaseOrder.getId(),purchaseOrder.getSupplier(),purchaseOrder.getDate(),purchaseOrder.getData()});
+
+        String sql2="insert into goods_pur_o('goods_id','pur_id') values(?,?)";
+        db.execSQL(sql2,new Object[]{goodsId,purchaseOrder.getId()});
+    }
+
+    public ArrayList<PurchaseOrder> getPurOrderListByGoodsId(int goodsId) throws ParseException {
+        String sql="select * from pur_order where id in(select pur_id from goods_pur_o where goods_id=?)";
+        Cursor cursor= db.rawQuery(sql,new String[]{String.valueOf(goodsId)});
+        ArrayList<PurchaseOrder> list = new ArrayList<>();
+        while(cursor.moveToNext()){
+            String id =cursor.getString(cursor.getColumnIndex("id"));
+            String supplier =cursor.getString(cursor.getColumnIndex("supplier"));
+            String dateStr=cursor.getString(cursor.getColumnIndex("date"));
+            byte[] data=cursor.getBlob(cursor.getColumnIndex("data"));
+            list.add(new PurchaseOrder(id,supplier,dateStr,data));
+        }
+        return list;
     }
 
     //删除数据的方法
@@ -110,7 +130,7 @@ public class CrudService {
         ArrayList<Goods> list = new ArrayList<>();
         StringBuffer sql =new StringBuffer("select * from goodsdata ");
         if (word!=null&&!"".equals(word)){
-            sql.append("where name like \"%").append(word).append("%\" or barcode = ").append(word);
+            sql.append("where name like \"%").append(word).append("%\" or barcode = \"").append(word).append("\"");
         }sql.append(" limit ?,?");
         Cursor cursor= db.rawQuery(String.valueOf(sql),new String[]{String.valueOf(min), String.valueOf(page)});
         while(cursor.moveToNext()){

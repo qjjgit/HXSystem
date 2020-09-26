@@ -9,39 +9,32 @@
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        >
+        android:orientation="horizontal">
 
         <Button
             android:id="@+id/btn_addPurOrder"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginEnd="8dp"
-            android:onClick="addPurOrder"
+            android:layout_marginTop="16dp"
+            android:layout_marginEnd="20dp"
+            android:layout_marginBottom="8dp"
+            android:onClick="addPurOrderPage"
             android:text="添加进货单"
+            app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
     </androidx.constraintlayout.widget.ConstraintLayout>
-
-    <ScrollView
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:fillViewport="true"
-        android:scrollbars="none">
-        <HorizontalScrollView
-            android:id="@+id/scroll_PurOrderView"
-            android:layout_width="match_parent"
+        <TextView
+            android:id="@+id/notFoundWord"
+            android:layout_width="fill_parent"
             android:layout_height="wrap_content"
-            android:scrollbarAlwaysDrawHorizontalTrack="false"
-            android:scrollbars="none">
-
-            <LinearLayout
-                android:id="@+id/purOrder"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="5dp"
-                android:orientation="vertical">
-            </LinearLayout>
-        </HorizontalScrollView>
-    </ScrollView>
+            android:textAlignment="center"
+            android:textSize="0sp"
+            android:padding="5dp"/>
+        <ListView
+            android:id="@+id/list_purOrder"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:divider="#00000000"
+            android:dividerHeight="5dp"/>
 </LinearLayout>
