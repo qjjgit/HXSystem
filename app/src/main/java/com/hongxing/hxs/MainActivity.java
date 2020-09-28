@@ -8,6 +8,10 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
+import android.graphics.Matrix;
+import android.graphics.Paint;
+import android.graphics.PaintFlagsDrawFilter;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.MediaStore;
@@ -16,6 +20,7 @@ import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.WindowManager;
+import android.widget.AbsListView;
 import android.widget.AdapterView;
 import android.widget.EditText;
 import android.widget.ImageView;
@@ -63,9 +68,9 @@ public class MainActivity extends AppCompatActivity {
     private static boolean isQuit = false;
     private Timer timer = new Timer();
     public static Goods goods;
-    private ListView listView_PurOrderBody;
-    private List<Map<String,Object>> lists;
-    private SimpleAdapter adapter;
+    private ListView listView_PurOrderBody=null;
+    private List<Map<String,Object>> lists=null;
+    private SimpleAdapter adapter=null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -175,37 +180,32 @@ public class MainActivity extends AppCompatActivity {
     //确认添加进货单
     public void sureToAdd_purOrder(Bitmap bitmap,String strDate,String supplier){
         //将图片转化为位图
-        int size = bitmap.getWidth() * bitmap.getHeight() * 4;
+//        int size = bitmap.getWidth() * bitmap.getHeight() * 4;
+        int byteCount = bitmap.getByteCount();
         //int size = 20 * 30 * 4;
         //创建一个字节数组输出流,流的大小为size
-        ByteArrayOutputStream baos= new ByteArrayOutputStream(size);
+        ByteArrayOutputStream baos= new ByteArrayOutputStream(byteCount);
         try {
             //设置位图的压缩格式，质量为100%，并放入字节数组输出流中
-            bitmap.compress(Bitmap.CompressFormat.PNG, 100, baos);
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 100, baos);
             //将字节数组输出流转化为字节数组byte[]
             byte[] imagedata = baos.toByteArray();
             PurchaseOrder purchaseOrder = new PurchaseOrder(UUID.randomUUID().toString(),supplier,strDate,imagedata);
             CrudService service = new CrudService(getApplicationContext());
             service.savePurchaseOrder(goods.getId(),purchaseOrder);
             service.close();
-            if (lists==null){lists=new ArrayList<>();
-                View root= LayoutInflater.from(getApplicationContext()).inflate(R.layout.purchaseorder_page, null);
-                TextView notFoundWord=root.findViewById(R.id.notFoundWord);
-                notFoundWord.setText("");
-                notFoundWord.setTextSize(0);
-                }
             Map<String, Object> map = new HashMap<>();
             map.put("imgData",bitmap);
             map.put("supplier",purchaseOrder.getSupplier());
             map.put("date",purchaseOrder.getDate());
+            if (lists==null)lists=new ArrayList<>();
             lists.add(map);
-            if (adapter==null){
+            if (listView_PurOrderBody!=null){
                 adapter = new SimpleAdapter(this, lists, R.layout.list_item,
                         new String[]{"imgData","supplier","date"}, new int[]{R.id.pur_img_item,R.id.pur_supplier_item,R.id.pur_date_item});
                 adapter.setViewBinder(new MyViewBinder());
                 listView_PurOrderBody.setAdapter(adapter);
             }
-
             Toast.makeText(getApplicationContext(),"进货单添加成功！",Toast.LENGTH_SHORT).show();
         }catch (Exception e){
             e.printStackTrace();
@@ -320,15 +320,16 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    //进货单页面
+    //进货单列表页面
     public void showPurchaseOrderPage(View view){
-        View root= LayoutInflater.from(this).inflate(R.layout.purchaseorder_page, null);
-        AlertDialog.Builder builder= new AlertDialog.Builder(MainActivity.this,R.style.Dialog_Fullscreen);
+        Context context = this;
+        View root= LayoutInflater.from(context).inflate(R.layout.purchaseorder_page, null);
+        AlertDialog.Builder builder= new AlertDialog.Builder(context,R.style.Dialog_Fullscreen);
         final Dialog dialog= builder.create();
         dialog.show();
         dialog.getWindow().setContentView(root);
         listView_PurOrderBody=root.findViewById(R.id.list_purOrder);
-        CrudService service = new CrudService(this);
+        CrudService service = new CrudService(context);
         try {
             ArrayList<PurchaseOrder> purOrderList = service.getPurOrderListByGoodsId(goods.getId());
             service.close();
@@ -338,10 +339,9 @@ public class MainActivity extends AppCompatActivity {
                 textV_notFound.setText("该商品未添加进货单！");
                 return;
             }
-            if (lists==null){
-                lists=new ArrayList<>();
-                textV_notFound.setTextSize(0);
-            }
+            if (lists==null)
+            lists=new ArrayList<>();
+            else lists.clear();
             for (PurchaseOrder po : purOrderList) {
                 Map<String,Object> map=new HashMap<>();
                 byte[] imgData = po.getData();
@@ -376,8 +376,19 @@ public class MainActivity extends AppCompatActivity {
                     dialog.getWindow().setContentView(root);
                     ImageView imgV=root.findViewById(R.id.img_fullscreen);
                     if (lists.get(i).get("imgData") instanceof Bitmap){
-                        Bitmap bitmap=(Bitmap) lists.get(i).get("imgData");
-                        imgV.setImageBitmap(bitmap);
+//                        int newW = imgV.getWidth();
+//                        int newH = imgV.getHeight();
+                        Bitmap b=(Bitmap) lists.get(i).get("imgData");
+//                        int height = b.getHeight();
+//                        int width = b.getWidth();
+//                        float scaleX = newW / (width);
+//                        float scaleY = newH / (height);
+//                        Matrix matrix = new Matrix();
+//                        matrix.postScale(persentageX,persentageY);
+//                        Bitmap bitmap = Bitmap.createBitmap(b, 0, 0, width, height,matrix,true);
+//                        imgV.setImageBitmap(bitmap);
+                        imgV.setImageBitmap(b);
+                        imgV.setScaleType(ImageView.ScaleType.FIT_CENTER);
                     }else imgV.setImageResource(R.mipmap.ic_launcher);
 //                    imgV.setOnClickListener(new View.OnClickListener(){
 //                        @Override
@@ -407,7 +418,7 @@ public class MainActivity extends AppCompatActivity {
         if (keyCode == KeyEvent.KEYCODE_BACK) {
             if (!isQuit) {
                 isQuit = true;
-                Toast.makeText(this, "请按两次回退键退出", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "再按一次返回键退出", Toast.LENGTH_SHORT).show();
                 TimerTask task = null;
                 task = new TimerTask() {
                     @Override
