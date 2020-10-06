@@ -175,6 +175,7 @@ public class DashboardFragment extends Fragment {
         }
     }
 
+    /*点击表头实现某一列排序*/
     private void setOnClick(MyTableTextView view){
         view.setOnClickListener(new View.OnClickListener() {
             @Override

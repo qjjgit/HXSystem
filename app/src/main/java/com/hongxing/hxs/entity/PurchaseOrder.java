@@ -1,21 +1,20 @@
 package com.hongxing.hxs.entity;
 
-import java.util.Arrays;
 
 public class PurchaseOrder {
     private String id;
     private String supplier;
     private String date;
-    private byte[] data;
+    private String data_uri;
 
     public PurchaseOrder() {
     }
 
-    public PurchaseOrder(String id, String supplier, String date, byte[] data) {
+    public PurchaseOrder(String id, String supplier, String date, String data_uri) {
         this.id = id;
         this.supplier = supplier;
         this.date = date;
-        this.data = data;
+        this.data_uri = data_uri;
     }
 
     @Override
@@ -24,7 +23,7 @@ public class PurchaseOrder {
                 "id='" + id + '\'' +
                 ", supplier='" + supplier + '\'' +
                 ", date='" + date + '\'' +
-                ", data=" + Arrays.toString(data) +
+                ", data_uri='" + data_uri + '\'' +
                 '}';
     }
 
@@ -48,15 +47,15 @@ public class PurchaseOrder {
         return date;
     }
 
-    public void setDate(String date) {
-        this.date = date;
+    public void setDate(String data_uri) {
+        this.data_uri = data_uri;
     }
 
-    public byte[] getData() {
-        return data;
+    public String getDataUri() {
+        return data_uri;
     }
 
-    public void setData(byte[] data) {
-        this.data = data;
+    public void setDataUri(String data_uri) {
+        this.data_uri = data_uri;
     }
 }

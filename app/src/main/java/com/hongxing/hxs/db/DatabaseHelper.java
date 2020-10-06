@@ -23,7 +23,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     }
     @Override
     public void onCreate(SQLiteDatabase db) {
-// TODO 创建数据库后，对数据库的操作
+//  创建数据库后，对数据库的操作
         Log.e(TAG,"开始创建数据库表");
         try {
             db.execSQL("create table if not exists goodsdata(id integer primary key autoincrement ,name char(20),barcode char(15),unit char(4),price float,orig float)");
@@ -35,12 +35,12 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     }
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-// TODO 更改数据库版本的操作
+//  更改数据库版本的操作
         db.execSQL("alter table goods add tel varchar(20)");
     }
     @Override
     public void onOpen(SQLiteDatabase db) {
         super.onOpen(db);
-// TODO 每次成功打开数据库后首先被执行
+//  每次成功打开数据库后首先被执行
     }
 }

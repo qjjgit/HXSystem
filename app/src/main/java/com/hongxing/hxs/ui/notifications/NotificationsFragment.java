@@ -1,10 +1,12 @@
 package com.hongxing.hxs.ui.notifications;
 
 import android.os.Bundle;
+import android.os.Environment;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.Nullable;
 import androidx.annotation.NonNull;
@@ -13,6 +15,8 @@ import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProviders;
 
 import com.hongxing.hxs.R;
+
+import java.io.File;
 
 public class NotificationsFragment extends Fragment {
 
@@ -27,7 +31,13 @@ public class NotificationsFragment extends Fragment {
         notificationsViewModel.getText().observe(this, new Observer<String>() {
             @Override
             public void onChanged(@Nullable String s) {
-                textView.setText(s);
+                try {
+                    String filePath= getContext().getExternalFilesDir(null).getPath();
+//                    Toast.makeText(getContext(),filePath,Toast.LENGTH_LONG).show();
+                    textView.setText(filePath);
+                }catch (Exception e){
+                    e.printStackTrace();
+                }
             }
         });
         return root;

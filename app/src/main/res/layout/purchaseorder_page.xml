@@ -29,6 +29,7 @@
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"
             android:textAlignment="center"
+            android:text="该商品未添加进货单！"
             android:textSize="0sp"
             android:padding="5dp"/>
         <ListView

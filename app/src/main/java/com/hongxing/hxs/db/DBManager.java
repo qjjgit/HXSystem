@@ -6,8 +6,11 @@ import android.content.res.AssetManager;
 import android.database.sqlite.SQLiteDatabase;
 import android.util.Log;
 
+import com.hongxing.hxs.MainActivity;
 import com.hongxing.hxs.service.CrudService;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileDescriptor;
@@ -19,7 +22,9 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.lang.reflect.Array;
 import java.sql.Blob;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 
 public class DBManager {
     //数据库存储路径
@@ -94,6 +99,27 @@ public class DBManager {
             db.close();
         } catch (IOException e) {
             e.printStackTrace();
+        }
+    }
+
+    public static boolean exportDBFileToDir(String dir){
+        try {
+            BufferedInputStream inputStream= new BufferedInputStream(new FileInputStream(jhPath));
+            String filePath=dir+File.separator
+                    +new SimpleDateFormat("yyyy-MM-dd_HH.mm.ss备份").format(new Date())
+                    +".s3db";
+            BufferedOutputStream outputStream= new BufferedOutputStream(new FileOutputStream(filePath));
+            int j;
+            byte[] bytes2 =new byte[1024];
+            while((j=inputStream.read(bytes2))!=-1) {
+                outputStream.write(bytes2,0,j);
+            }
+            inputStream.close();
+            outputStream.close();
+            return true;
+        }catch (Exception e){
+            e.printStackTrace();
+            return false;
         }
     }
 }

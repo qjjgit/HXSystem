@@ -4,23 +4,21 @@ import android.Manifest;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.graphics.Canvas;
-import android.graphics.Matrix;
-import android.graphics.Paint;
-import android.graphics.PaintFlagsDrawFilter;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
 import android.provider.MediaStore;
 import android.text.TextUtils;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.WindowManager;
-import android.widget.AbsListView;
 import android.widget.AdapterView;
 import android.widget.EditText;
 import android.widget.ImageView;
@@ -43,12 +41,13 @@ import com.huawei.hms.ml.scan.HmsScan;
 import com.huawei.hms.ml.scan.HmsScanAnalyzerOptions;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.FileProvider;
 import androidx.navigation.NavController;
 import androidx.navigation.Navigation;
 import androidx.navigation.ui.AppBarConfiguration;
 import androidx.navigation.ui.NavigationUI;
 
-import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
@@ -68,9 +67,11 @@ public class MainActivity extends AppCompatActivity {
     private static boolean isQuit = false;
     private Timer timer = new Timer();
     public static Goods goods;
+    private View nowTopLayerView;
     private ListView listView_PurOrderBody=null;
     private List<Map<String,Object>> lists=null;
     private SimpleAdapter adapter=null;
+    private File showPIC=null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -113,7 +114,10 @@ public class MainActivity extends AppCompatActivity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         //receive result after your activity finished scanning
         super.onActivityResult(requestCode, resultCode, data);
-        if (resultCode != RESULT_OK || data == null) {
+        if (resultCode != RESULT_OK ) {
+            if (requestCode==REQUEST_CODE_SHOOT){
+                showPIC.delete();
+            }
             return;
         }
         // Obtain the return value of HmsScan from the value returned by the onActivityResult method by using ScanUtil.RESULT as the key value.
@@ -138,21 +142,22 @@ public class MainActivity extends AppCompatActivity {
 
         //拍照 进货单结果
         if (requestCode == REQUEST_CODE_SHOOT){
-            Bundle bundle = data.getExtras();
-            final Bitmap bitmap = (Bitmap) bundle.get("data"); //将data中的信息流解析为Bitmap类型
             View view= LayoutInflater.from(this).inflate(R.layout.suretoadd_purorder_page, null);
+            final Bitmap bitmap_orig = BitmapFactory.decodeFile(showPIC.getPath());
+            final Bitmap bitmap_comp=centerSquareScaleBitmap(bitmap_orig, this.dip2px(150));
             ImageView imgView=view.findViewById(R.id.img_addingPurOrder);
-            imgView.setImageBitmap(bitmap);
-            AlertDialog.Builder builder= new AlertDialog.Builder(MainActivity.this);
+            imgView.setImageBitmap(bitmap_comp);
+            AlertDialog.Builder builder= new AlertDialog.Builder(this);
             final Dialog dialog= builder.create();
             dialog.show();
             dialog.getWindow().setContentView(view);
-            dialog.setCancelable(false);
             dialog.getWindow().clearFlags(WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM);
+            dialog.setCancelable(false);
             (view.findViewById(R.id.addPurOrder_cancel)).setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View view) {
                     dialog.dismiss();
+                    showPIC.delete();
                 }
             });
             final EditText addPurOrder_date= view.findViewById(R.id.addPurOrder_date);
@@ -171,51 +176,50 @@ public class MainActivity extends AppCompatActivity {
                     }
                     String supplier =addPurOrder_supplier.getText().toString().replaceAll(" ","");
                     if (supplier.length()<1)supplier="未填写";
-                    sureToAdd_purOrder(bitmap,strDate,supplier);
+                    sureToAdd_purOrder(bitmap_comp,strDate,supplier);
                     dialog.dismiss();
                 }
             });
         }
+
     }
     //确认添加进货单
-    public void sureToAdd_purOrder(Bitmap bitmap,String strDate,String supplier){
+    public void sureToAdd_purOrder(Bitmap bitmap_comp,String strDate,String supplier){
         //将图片转化为位图
 //        int size = bitmap.getWidth() * bitmap.getHeight() * 4;
-        int byteCount = bitmap.getByteCount();
+//        int byteCount = bitmap_orig.getByteCount();
         //int size = 20 * 30 * 4;
         //创建一个字节数组输出流,流的大小为size
-        ByteArrayOutputStream baos= new ByteArrayOutputStream(byteCount);
+//        ByteArrayOutputStream baos= new ByteArrayOutputStream(byteCount);
         try {
             //设置位图的压缩格式，质量为100%，并放入字节数组输出流中
-            bitmap.compress(Bitmap.CompressFormat.JPEG, 100, baos);
+//            bitmap_orig.compress(Bitmap.CompressFormat.JPEG, 100, baos);
             //将字节数组输出流转化为字节数组byte[]
-            byte[] imagedata = baos.toByteArray();
-            PurchaseOrder purchaseOrder = new PurchaseOrder(UUID.randomUUID().toString(),supplier,strDate,imagedata);
+//            byte[] imagedata = baos.toByteArray();
+            PurchaseOrder purchaseOrder = new PurchaseOrder(UUID.randomUUID().toString(),supplier,strDate,showPIC.getPath());
             CrudService service = new CrudService(getApplicationContext());
             service.savePurchaseOrder(goods.getId(),purchaseOrder);
             service.close();
             Map<String, Object> map = new HashMap<>();
-            map.put("imgData",bitmap);
+            map.put("origImgUri",showPIC.getPath());
+            map.put("compImg",bitmap_comp);
             map.put("supplier",purchaseOrder.getSupplier());
             map.put("date",purchaseOrder.getDate());
-            if (lists==null)lists=new ArrayList<>();
+            if (lists==null){
+                lists=new ArrayList<>();
+            }
             lists.add(map);
             if (listView_PurOrderBody!=null){
+                ((TextView)nowTopLayerView.findViewById(R.id.notFoundWord)).setTextSize(0);
                 adapter = new SimpleAdapter(this, lists, R.layout.list_item,
-                        new String[]{"imgData","supplier","date"}, new int[]{R.id.pur_img_item,R.id.pur_supplier_item,R.id.pur_date_item});
+                        new String[]{"compImg","supplier","date"}, new int[]{R.id.pur_img_item,R.id.pur_supplier_item,R.id.pur_date_item});
                 adapter.setViewBinder(new MyViewBinder());
                 listView_PurOrderBody.setAdapter(adapter);
             }
             Toast.makeText(getApplicationContext(),"进货单添加成功！",Toast.LENGTH_SHORT).show();
         }catch (Exception e){
-            e.printStackTrace();
-        }finally {
-            try {
-                //bitmap.recycle();
-                baos.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+//            e.printStackTrace();
+            Toast.makeText(getApplicationContext(),e.getMessage(),Toast.LENGTH_LONG).show();
         }
     }
 
@@ -236,9 +240,9 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    //点击 添加商品
+    //点击 添加商品  by click
     public void addGoodsClick(View v){
-        if (goods==null)goods=new Goods();
+        goods=new Goods();
         showAddGoodsPage();
     }
 
@@ -320,15 +324,53 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    //进货单列表页面
+    //进货单列表页面  by click
     public void showPurchaseOrderPage(View view){
-        Context context = this;
+        final Context context = this;
         View root= LayoutInflater.from(context).inflate(R.layout.purchaseorder_page, null);
+        nowTopLayerView=root;
         AlertDialog.Builder builder= new AlertDialog.Builder(context,R.style.Dialog_Fullscreen);
         final Dialog dialog= builder.create();
         dialog.show();
         dialog.getWindow().setContentView(root);
+        dialog.setOnKeyListener(new DialogInterface.OnKeyListener() {
+            @Override
+            public boolean onKey(DialogInterface dialog, int keyCode, KeyEvent event) {
+                if (keyCode== KeyEvent.KEYCODE_BACK&&event.getAction()==KeyEvent.ACTION_UP){
+                    lists.clear();
+                    dialog.dismiss();
+                }
+                return true;
+            }
+        });
+        if (lists==null)
+            lists=new ArrayList<>();
+        else lists.clear();
         listView_PurOrderBody=root.findViewById(R.id.list_purOrder);
+        listView_PurOrderBody.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
+                Context context = view.getContext();
+                View root= LayoutInflater.from(context).inflate(R.layout.show_bitmap_full, null);
+                AlertDialog.Builder builder= new AlertDialog.Builder(context,R.style.Dialog_Fullscreen);
+                final Dialog dialog= builder.create();
+                dialog.show();
+                dialog.getWindow().setContentView(root);
+                ImageView imgV=root.findViewById(R.id.img_fullscreen);
+                if (lists.get(i).get("origImgUri") instanceof String){
+                    String uri=(String) lists.get(i).get("origImgUri");
+                    Bitmap bitmap = BitmapFactory.decodeFile(uri);
+                    imgV.setImageBitmap(bitmap);
+                    imgV.setScaleType(ImageView.ScaleType.FIT_CENTER);
+                }else imgV.setImageResource(R.mipmap.ic_launcher);
+//                    imgV.setOnClickListener(new View.OnClickListener(){
+//                        @Override
+//                        public void onClick(View v){
+//                            dialog.dismiss();
+//                        }
+//                    });
+            }
+        });
         CrudService service = new CrudService(context);
         try {
             ArrayList<PurchaseOrder> purOrderList = service.getPurOrderListByGoodsId(goods.getId());
@@ -336,78 +378,113 @@ public class MainActivity extends AppCompatActivity {
             TextView textV_notFound=root.findViewById(R.id.notFoundWord);
             if (purOrderList.size()<1){
                 textV_notFound.setTextSize(24);
-                textV_notFound.setText("该商品未添加进货单！");
                 return;
             }
-            if (lists==null)
-            lists=new ArrayList<>();
-            else lists.clear();
             for (PurchaseOrder po : purOrderList) {
                 Map<String,Object> map=new HashMap<>();
-                byte[] imgData = po.getData();
-                Bitmap bitmap = BitmapFactory.decodeByteArray(imgData, 0, imgData.length);
-                map.put("imgData",bitmap);
+                String imgUri = po.getDataUri();
+                map.put("origImgUri",imgUri);
+                Bitmap bitmap = BitmapFactory.decodeFile(imgUri);
+                bitmap=centerSquareScaleBitmap(bitmap,dip2px(100));
+                map.put("compImg",bitmap);
                 map.put("supplier",po.getSupplier());
                 map.put("date",po.getDate());
                 lists.add(map);
             }
-//            int[] imgs=new int[]{R.mipmap.ic_launcher,R.mipmap.ic_launcher_my};
-//            String[] date=new String[]{"2020-12-12","2018-11-10"};
-//            String[] supplier=new String[]{"河池烟草","金城江小飞机"};
-//            for (int q = 0; q < date.length; q++) {
-//                Map<String, Object> map = new HashMap<>();
-//                map.put("imgData",imgs[q]);
-//                map.put("supplier",supplier[q]);
-//                map.put("date",date[q]);
-//                lists.add(map);
-//            }
             adapter = new SimpleAdapter(this, lists, R.layout.list_item,
-                    new String[]{"imgData","supplier","date"}, new int[]{R.id.pur_img_item,R.id.pur_supplier_item,R.id.pur_date_item});
+                    new String[]{"compImg","supplier","date"}, new int[]{R.id.pur_img_item,R.id.pur_supplier_item,R.id.pur_date_item});
             adapter.setViewBinder(new MyViewBinder());
             listView_PurOrderBody.setAdapter(adapter);
-            listView_PurOrderBody.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-                @Override
-                public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
-                    Context context = view.getContext();
-                    View root= LayoutInflater.from(context).inflate(R.layout.show_bitmap_full, null);
-                    AlertDialog.Builder builder= new AlertDialog.Builder(context,R.style.Dialog_Fullscreen);
-                    final Dialog dialog= builder.create();
-                    dialog.show();
-                    dialog.getWindow().setContentView(root);
-                    ImageView imgV=root.findViewById(R.id.img_fullscreen);
-                    if (lists.get(i).get("imgData") instanceof Bitmap){
-//                        int newW = imgV.getWidth();
-//                        int newH = imgV.getHeight();
-                        Bitmap b=(Bitmap) lists.get(i).get("imgData");
-//                        int height = b.getHeight();
-//                        int width = b.getWidth();
-//                        float scaleX = newW / (width);
-//                        float scaleY = newH / (height);
-//                        Matrix matrix = new Matrix();
-//                        matrix.postScale(persentageX,persentageY);
-//                        Bitmap bitmap = Bitmap.createBitmap(b, 0, 0, width, height,matrix,true);
-//                        imgV.setImageBitmap(bitmap);
-                        imgV.setImageBitmap(b);
-                        imgV.setScaleType(ImageView.ScaleType.FIT_CENTER);
-                    }else imgV.setImageResource(R.mipmap.ic_launcher);
-//                    imgV.setOnClickListener(new View.OnClickListener(){
-//                        @Override
-//                        public void onClick(View v){
-//                            dialog.dismiss();
-//                        }
-//                    });
-                }
-            });
         } catch (Exception e) {
-            e.printStackTrace();
+            Toast.makeText(this,e.getMessage(),Toast.LENGTH_LONG).show();
+//            e.printStackTrace();
         }
     }
 
-    //添加进货单
-    public void addPurOrderPage(View view){
-        Intent intent = new Intent();
-        intent.setAction(MediaStore.ACTION_IMAGE_CAPTURE); //设置动作为调用照相机
+    //添加进货单  by click
+    public void addPurOrderPage(View view) {
+        Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);//设置动作为调用照相机
+        File file = createPhotoFile();
+        if (file!=null){
+            showPIC=file;
+            Uri imgUri= FileProvider.getUriForFile(this, "comgin.example.root.hightqualitycame.fileprovider", file);
+            intent.putExtra(MediaStore.EXTRA_OUTPUT,imgUri);//指定系统相机拍照保存在imageFileUri所指的位置
+        }
         startActivityForResult(intent, REQUEST_CODE_SHOOT);
+    }
+
+    //创建进货单图像文件
+    public File createPhotoFile() {
+//        String strdir=Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES).getPath()
+//                +File.separator+"HongXing";
+        /*若要修改路径，需同时修改file_paths.xml内声明的根目录*/
+        String strdir=this.getExternalFilesDir(null).getPath()
+                +File.separator+"PurchaseOrder";
+        File stordir = new File(strdir);
+        if (!stordir.exists()) stordir.mkdir();
+        //获得公共目录下的图片文件路径
+        File image= null;
+        try {
+            image = File.createTempFile("IMG_",".jpg",stordir);
+        } catch (IOException e) {
+            Toast.makeText(this,"createPhotoFile()异常\n"+e.getMessage(),Toast.LENGTH_LONG).show();
+        }
+        //1：字首2：后缀3：在哪个目录下
+        return  image;
+    }
+
+    /**
+     * 缩放图片裁剪指定大小的正方形
+     * @param bitmap 原图
+     * @param edgeLength 正方形的边长
+     * @return 裁剪后的图片
+     */
+    public Bitmap centerSquareScaleBitmap(Bitmap bitmap, int edgeLength){
+        if(null == bitmap || edgeLength <= 0){
+            return null;
+        }
+        Bitmap result = bitmap;
+        int width = bitmap.getWidth();
+        int height = bitmap.getHeight();
+        if(width > edgeLength && height > edgeLength){
+            int longerEdge = (int)(edgeLength * Math.max(width, height) / Math.min(width, height));
+            int scaleWidth = width > height ? longerEdge : edgeLength;
+            int scaleHeight = width > height ? edgeLength : longerEdge;
+            Bitmap scaleBitmap;
+            try{
+                scaleBitmap = Bitmap.createScaledBitmap(bitmap, scaleWidth, scaleHeight, true);
+            }catch(Exception e){
+                return null;
+            }
+            //从图片的正中间裁剪
+            int xTopLeft = (scaleWidth - edgeLength)/2;
+            int yTopLeft = (scaleHeight - edgeLength)/2;
+            try{
+                result = Bitmap.createBitmap(scaleBitmap, xTopLeft, yTopLeft, edgeLength, edgeLength);
+                scaleBitmap.recycle();
+            }catch(Exception e){
+                return null;
+            }
+        }
+        return result;
+    }
+
+    //将dp转换成px
+    public int dip2px(int dpSize){
+        final float scale = getResources().getDisplayMetrics().density;
+        return (int)(dpSize * scale + 0.5f);
+    }
+
+    //导出数据
+    public void exportDB(View view){
+        String strdir=Environment.getExternalStorageDirectory().getPath()
+                +File.separator+"鸿兴系统";
+        File file = new File(strdir);
+        if (!file.exists())file.mkdir();
+        boolean success = DBManager.exportDBFileToDir(strdir);
+        String msg="备份失败！";
+        if (success) msg="已备份到"+strdir;
+        Toast.makeText(this,msg,Toast.LENGTH_LONG).show();
     }
 
     /*

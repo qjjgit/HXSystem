@@ -4,16 +4,13 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 
-
 import com.hongxing.hxs.db.DBManager;
 import com.hongxing.hxs.entity.Goods;
 import com.hongxing.hxs.entity.PurchaseOrder;
 
 import java.io.UnsupportedEncodingException;
 import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Date;
 
 public class CrudService {
 //    private DatabaseHelper databaseHelper;
@@ -39,9 +36,9 @@ public class CrudService {
         db.execSQL(sql, new Object[]{goods.getName(),goods.getBarcode(),goods.getUnit(),goods.getPrice(),goods.getOrig()});//执行sql语句？由数组提供
     }
 
-    public void savePurchaseOrder(int goodsId,PurchaseOrder purchaseOrder){
-        String sql1="insert into pur_order('id','supplier','date','data') values(?,?,?,?)";
-        db.execSQL(sql1,new Object[]{purchaseOrder.getId(),purchaseOrder.getSupplier(),purchaseOrder.getDate(),purchaseOrder.getData()});
+    public void savePurchaseOrder(int goodsId,PurchaseOrder purchaseOrder) {
+        String sql1="insert into pur_order('id','supplier','date','data_uri') values(?,?,?,?)";
+        db.execSQL(sql1,new Object[]{purchaseOrder.getId(),purchaseOrder.getSupplier(),purchaseOrder.getDate(),purchaseOrder.getDataUri()});
 
         String sql2="insert into goods_pur_o('goods_id','pur_id') values(?,?)";
         db.execSQL(sql2,new Object[]{goodsId,purchaseOrder.getId()});
@@ -55,8 +52,8 @@ public class CrudService {
             String id =cursor.getString(cursor.getColumnIndex("id"));
             String supplier =cursor.getString(cursor.getColumnIndex("supplier"));
             String dateStr=cursor.getString(cursor.getColumnIndex("date"));
-            byte[] data=cursor.getBlob(cursor.getColumnIndex("data"));
-            list.add(new PurchaseOrder(id,supplier,dateStr,data));
+            String dataUri=cursor.getString(cursor.getColumnIndex("data_uri"));
+            list.add(new PurchaseOrder(id,supplier,dateStr,dataUri));
         }
         return list;
     }

@@ -9,8 +9,12 @@
         android:id="@+id/pur_img_item"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:minWidth="230dp"
-        android:minHeight="230dp"/>
+        android:layout_marginTop="25dp"
+        android:layout_marginBottom="25dp"
+        android:layout_marginStart="10dp"
+        android:layout_marginEnd="10dp"
+        android:minWidth="180dp"
+        android:minHeight="180dp"/>
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="wrap_content"
