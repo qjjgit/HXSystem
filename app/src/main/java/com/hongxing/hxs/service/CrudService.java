@@ -102,7 +102,7 @@ public class CrudService {
         return exist;
     }
 
-    public Goods findByBarcode(String barcode) throws UnsupportedEncodingException {//单条查询的方法
+    public Goods findByBarcode(String barcode) {//单条查询的方法
         Goods goods=null;
 //        SQLiteDatabase db=databaseHelper.getReadableDatabase();
         String sql = "select * from goodsdata where barcode=?";
@@ -123,12 +123,16 @@ public class CrudService {
     }
 
     //查询分页数据的方法
-    public ArrayList<Goods> findByPage(int min,int page,String word) {
+    public ArrayList<Goods> findByPage(int min,int page,String word,String orderBy,String sortAction) {
         ArrayList<Goods> list = new ArrayList<>();
         StringBuffer sql =new StringBuffer("select * from goodsdata ");
         if (word!=null&&!"".equals(word)){
             sql.append("where name like \"%").append(word).append("%\" or barcode = \"").append(word).append("\"");
-        }sql.append(" limit ?,?");
+        }
+        if(orderBy!=null&&!"".equals(orderBy)){
+            sql.append(" order by ").append(orderBy).append(" ").append(sortAction);
+        }
+        sql.append(" limit ?,?");
         Cursor cursor= db.rawQuery(String.valueOf(sql),new String[]{String.valueOf(min), String.valueOf(page)});
         while(cursor.moveToNext()){
             int id =cursor.getInt(cursor.getColumnIndex("id"));
@@ -139,7 +143,23 @@ public class CrudService {
             float orig=cursor.getFloat(cursor.getColumnIndex("orig"));
             list.add(new Goods(id,name,barcode,unit,price,orig));
         }
-//        db.close();
+        return list;
+    }
+
+    public ArrayList<PurchaseOrder> findPurOrderByWord(String word){
+        ArrayList<PurchaseOrder> list = new ArrayList<>();
+        StringBuffer sql =new StringBuffer("select * from pur_order ");
+        if (word!=null&&!"".equals(word)){
+            sql.append("where supplier like \"%").append(word).append("%\"");
+        }
+        Cursor cursor= db.rawQuery(String.valueOf(sql),null);
+        while(cursor.moveToNext()){
+            String id =cursor.getString(cursor.getColumnIndex("id"));
+            String supplier=cursor.getString(cursor.getColumnIndex("supplier"));
+            String date=cursor.getString(cursor.getColumnIndex("date"));
+            String uri=cursor.getString(cursor.getColumnIndex("uri"));
+            list.add(new PurchaseOrder(id,supplier,date,uri));
+        }
         return list;
     }
 

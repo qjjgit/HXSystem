@@ -128,11 +128,7 @@ public class MainActivity extends AppCompatActivity {
                 if (!TextUtils.isEmpty(barcode)) {
                     if(barcode.length()==13){
 //                        Toast.makeText(this, resultText, Toast.LENGTH_SHORT).show();
-                        try {
-                            setThisGoodsByBarcode(barcode);
-                        } catch (UnsupportedEncodingException e) {
-                            e.printStackTrace();
-                        }
+                        setThisGoodsByBarcode(barcode);
                     }else{
                         Toast.makeText(this, "请扫描商品条码！", Toast.LENGTH_SHORT).show();
                     }
@@ -223,8 +219,8 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-
-    public void setThisGoodsByBarcode(String barcode) throws UnsupportedEncodingException {
+    //通过barcode设置当前goods属性
+    public void setThisGoodsByBarcode(String barcode) {
         CrudService service=new CrudService(this);
         goods=service.findByBarcode(barcode);
         service.close();
@@ -328,6 +324,7 @@ public class MainActivity extends AppCompatActivity {
     public void showPurchaseOrderPage(View view){
         final Context context = this;
         View root= LayoutInflater.from(context).inflate(R.layout.purchaseorder_page, null);
+        root.setSystemUiVisibility(View.SYSTEM_UI_FLAG_VISIBLE);// TODO: 2020/10/6 看看有没有用
         nowTopLayerView=root;
         AlertDialog.Builder builder= new AlertDialog.Builder(context,R.style.Dialog_Fullscreen);
         final Dialog dialog= builder.create();
@@ -487,9 +484,7 @@ public class MainActivity extends AppCompatActivity {
         Toast.makeText(this,msg,Toast.LENGTH_LONG).show();
     }
 
-    /*
-     * 回退按钮两次退出
-     */
+    /* 回退按钮两次退出 */
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         if (keyCode == KeyEvent.KEYCODE_BACK) {
@@ -505,7 +500,7 @@ public class MainActivity extends AppCompatActivity {
                 };
                 timer.schedule(task, 2000);
             } else {
-                finish();
+                MainActivity.this.finish();
                 System.exit(0);
             }
         }

@@ -3,6 +3,8 @@ package com.hongxing.hxs.ui.dashboard;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.app.ProgressDialog;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Handler;
@@ -11,7 +13,9 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.widget.AdapterView;
+import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.widget.Spinner;
@@ -27,22 +31,31 @@ import androidx.lifecycle.ViewModelProviders;
 import com.hongxing.hxs.MainActivity;
 import com.hongxing.hxs.R;
 import com.hongxing.hxs.entity.Goods;
+import com.hongxing.hxs.entity.PurchaseOrder;
 import com.hongxing.hxs.service.CrudService;
 import com.hongxing.hxs.utils.GoodsUtils;
 
+import java.text.Collator;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.Locale;
 
 public class DashboardFragment extends Fragment {
 
+    private int nowListPage=0;//0为商品信息列表，1为进货单列表
     private LinearLayout tableHeader;
     private LinearLayout tableBody;
     private RelativeLayout relativeLayout;
     private String[] tableHeaderTexts={"序号","商品名称","单位","售价","进货价"};
     private ArrayList<ArrayList<MyTableTextView>> tableBodyList=new ArrayList<>();
-    private ArrayList<Goods> tableBodyDataList;
+    private ArrayList<Goods> goodsList;
+    private ArrayList<PurchaseOrder> purOrderList;
     private DashboardViewModel dashboardViewModel;
     final Handler uiHandler=new Handler();
+    private String nowSearchWord;
+    private String[] lastSort=null;
 
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container, Bundle savedInstanceState) {
@@ -55,15 +68,31 @@ public class DashboardFragment extends Fragment {
             public void onChanged(@Nullable String s) {
             tableHeader=root.findViewById(R.id.MyTableHeader);
             tableBody=root.findViewById(R.id.MyTable);
-                final EditText searchTextV = root.findViewById(R.id.text_search);
-                (root.findViewById(R.id.btn_search))
-                .setOnClickListener(new View.OnClickListener() {
+            final EditText searchTextV = root.findViewById(R.id.text_search);
+            (root.findViewById(R.id.btn_search)).setOnClickListener(new View.OnClickListener() {
                 @Override
-                public void onClick(View view) {// TODO: 2020/9/25 中文关键词闪退
-                String str = (searchTextV.getText().toString()).replace(" ","");
-                searchTextV.setText(str);
-                searchTextV.setSelection(str.length());
-                doSearch(str);
+                public void onClick(View view){
+                lastSort=null;
+                nowSearchWord = (searchTextV.getText().toString()).replace(" ","");
+                searchTextV.setText(nowSearchWord);
+                searchTextV.setSelection(nowSearchWord.length());
+                doSearch();
+                }
+            });
+                final Button btn = root.findViewById(R.id.btn_jumpPage);
+                btn.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    String str="进货单列表";
+                    if (nowListPage==0){nowListPage=1;str="商品列表";}
+                    else nowListPage=0;
+                    btn.setText(str);
+                    tableHeader.removeAllViews();
+                    tableBody.removeAllViews();
+                    goodsList.clear();
+                    if (purOrderList!=null)purOrderList.clear();
+                    queryData();
+                    loadData();
                 }
             });
             AsynchronousLoading();
@@ -85,7 +114,8 @@ public class DashboardFragment extends Fragment {
                     @Override
                     public void run() {
                         initTableHeader();
-                        LoadData(null);
+                        queryData();
+                        loadData();
                     }
                 });
                 if (post){
@@ -128,50 +158,95 @@ public class DashboardFragment extends Fragment {
         tableHeader.addView(relativeLayout);
     }
 
-    private void LoadData(String searchWord){
+    private void queryData(){
         final CrudService service = new CrudService(getContext());
-        tableBodyDataList = service.findByPage(0, service.getCount(),searchWord);
-        service.close();
-        if(tableBodyDataList.size()<1){
-            TextView child = new TextView(getContext());
-            child.setTextSize(20);
-            child.setWidth(400);
-            child.setPadding(10,20,0,0);
-            child.setTextAlignment(View.TEXT_ALIGNMENT_CENTER);
-            child.setText("没有查询到相关商品！");
-            tableBody.addView(child);
-            return;
+        switch (nowListPage){
+            case 0:{
+                goodsList = service.findByPage(0, 999,
+                        nowSearchWord,null,null);
+            }
+            case 1:{
+                purOrderList=service.findPurOrderByWord(null);
+            }
         }
-        for(int i=0;i<tableBodyDataList.size();i++){
-            relativeLayout=(RelativeLayout) LayoutInflater.from(this.getContext()).inflate(R.layout.table,null);
-            int color = Color.parseColor("#ffffff");
-            if (i%2!=0) color= Color.parseColor("#eeeeee");
-            final MyTableTextView col1 = relativeLayout.findViewById(R.id.list_1_1);
-            col1.setBackgroundColor(color);
-            col1.setText(String.valueOf(i+1));
-            final MyTableTextView col2 = relativeLayout.findViewById(R.id.list_1_2);
-            col2.setBackgroundColor(color);
-            col2.setText(tableBodyDataList.get(i).getName());
-            final MyTableTextView col3 = relativeLayout.findViewById(R.id.list_1_3);
-            col3.setBackgroundColor(color);
-            col3.setText(tableBodyDataList.get(i).getUnit());
-            final MyTableTextView col4 = relativeLayout.findViewById(R.id.list_1_4);
-            col4.setBackgroundColor(color);
-            col4.setText(String.valueOf(tableBodyDataList.get(i).getPrice()));
-            final MyTableTextView col5 = relativeLayout.findViewById(R.id.list_1_5);
-            col5.setBackgroundColor(color);
-            col5.setText(String.valueOf(tableBodyDataList.get(i).getOrig()));
-            tableBodyList.add(new ArrayList<MyTableTextView>(){{
-                add(col1);add(col2);add(col3);add(col4);add(col5);
-            }});
-            final int rowNumber = i;
-            relativeLayout.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View view) {
-                 showGoodsInfoPage(rowNumber);
+        service.close();
+    }
+
+    private void loadData(){
+        switch (nowListPage){
+            case 0:{
+                if(goodsList.size()<1){
+                    TextView child = new TextView(getContext());
+                    child.setTextSize(20);
+                    child.setWidth(400);
+                    child.setLines(1);
+                    child.setPadding(10,20,0,0);
+                    child.setTextAlignment(View.TEXT_ALIGNMENT_CENTER);
+                    child.setText("没有查询到相关商品！");
+                    tableBody.addView(child);
+                    return;
                 }
-            });
-            tableBody.addView(relativeLayout);
+                for(int i=0;i<goodsList.size();i++){
+                    relativeLayout=(RelativeLayout) LayoutInflater.from(this.getContext()).inflate(R.layout.table,null);
+                    int color = Color.parseColor("#ffffff");
+                    if (i%2!=0) color= Color.parseColor("#eeeeee");
+                    final MyTableTextView col1 = relativeLayout.findViewById(R.id.list_1_1);
+                    col1.setBackgroundColor(color);
+                    col1.setText(String.valueOf(goodsList.get(i).getId()));
+                    final MyTableTextView col2 = relativeLayout.findViewById(R.id.list_1_2);
+                    col2.setBackgroundColor(color);
+                    col2.setText(goodsList.get(i).getName());
+                    final MyTableTextView col3 = relativeLayout.findViewById(R.id.list_1_3);
+                    col3.setBackgroundColor(color);
+                    col3.setText(goodsList.get(i).getUnit());
+                    final MyTableTextView col4 = relativeLayout.findViewById(R.id.list_1_4);
+                    col4.setBackgroundColor(color);
+                    col4.setText(String.valueOf(goodsList.get(i).getPrice()));
+                    final MyTableTextView col5 = relativeLayout.findViewById(R.id.list_1_5);
+                    col5.setBackgroundColor(color);
+                    col5.setText(String.valueOf(goodsList.get(i).getOrig()));
+                    tableBodyList.add(new ArrayList<MyTableTextView>(){{
+                        add(col1);add(col2);add(col3);add(col4);add(col5);
+                    }});
+                    final int rowNumber = i;
+                    relativeLayout.setOnClickListener(new View.OnClickListener() {
+                        @Override
+                        public void onClick(View view) {
+                            showGoodsInfoPage(rowNumber);
+                        }
+                    });
+                    tableBody.addView(relativeLayout);
+                }
+            }
+            case 1:{
+                if(purOrderList.size()<1){
+                    TextView child = new TextView(getContext());
+                    child.setTextSize(20);
+                    child.setWidth(400);
+                    child.setLines(1);
+                    child.setPadding(10,20,0,0);
+                    child.setTextAlignment(View.TEXT_ALIGNMENT_CENTER);
+                    child.setText("没有查询到相关进货单！");
+                    tableBody.addView(child);
+                    return;
+                }
+                for(int i=0;i<purOrderList.size();i++){
+                    LinearLayout row=(LinearLayout) LayoutInflater.from(this.getContext()).inflate(R.layout.list_item,null);
+                    PurchaseOrder purchaseOrder = purOrderList.get(i);
+                    Bitmap bitmap = BitmapFactory.decodeFile(purchaseOrder.getDataUri());
+                    ((ImageView)row.findViewById(R.id.pur_img_item)).setImageBitmap(bitmap);
+                    ((TextView)row.findViewById(R.id.pur_supplier_item)).setText(purchaseOrder.getSupplier());
+                    ((TextView)row.findViewById(R.id.pur_date_item)).setText(purchaseOrder.getDate());
+                    final int rowNumber = i;
+                    row.setOnClickListener(new View.OnClickListener() {
+                        @Override
+                        public void onClick(View view) {
+                            showPurOrderInfoPage(rowNumber);
+                        }
+                    });
+                    tableBody.addView(row);
+                }
+            }
         }
     }
 
@@ -179,38 +254,96 @@ public class DashboardFragment extends Fragment {
     private void setOnClick(MyTableTextView view){
         view.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onClick(View view) {// TODO: 2020/9/24 点击表头实现排序
-                switch (view.getId()){
+            public void onClick(View v) {
+                if (goodsList.isEmpty())return;
+                tableBody.removeAllViews();
+                tableBodyList.clear();
+                String sortAction;
+                if(lastSort==null){
+                    lastSort=new String[]{"",""};
+                    sortAction="desc";
+                }
+                else if ("desc".equals(lastSort[1]))sortAction="asc";
+                else sortAction="desc";
+                final String s=sortAction;
+                switch (v.getId()){
                     case R.id.list_1_1:
-                        Toast.makeText(getContext(),"点击了序号",Toast.LENGTH_SHORT).show();
+                        lastSort=new String[]{"id",sortAction};
+                        Collections.sort(goodsList, new Comparator<Goods>() {
+                            @Override
+                            public int compare(Goods g1, Goods g2) {
+                                if (!lastSort[0].equals("id")||s.equals("asc"))
+                                return g1.getId()-g2.getId();
+                                return g2.getId()-g1.getId();
+                            }
+                        });
+                        loadData();
                         break;
                     case R.id.list_1_2:
-                        Toast.makeText(getContext(),"点击了名称",Toast.LENGTH_SHORT).show();
+                        lastSort=new String[]{"name",sortAction};
+                        Collections.sort(goodsList, new Comparator<Goods>() {
+                            @Override
+                            public int compare(Goods g1, Goods g2) {
+                                Collator c = Collator.getInstance(Locale.CHINA);
+                                if (!lastSort[0].equals("name")||s.equals("asc"))
+                                    return c.compare(g1.getName(),g2.getName());
+                                return c.compare(g2.getName(),g1.getName());
+                            }
+                        });
+                        loadData();
                         break;
                     case R.id.list_1_3:
-                        Toast.makeText(getContext(),"点击了单位",Toast.LENGTH_SHORT).show();
+                        lastSort=new String[]{"unit",sortAction};
+                        Collections.sort(goodsList, new Comparator<Goods>() {
+                            @Override
+                            public int compare(Goods g1, Goods g2) {
+                                Collator c = Collator.getInstance(Locale.CHINA);
+                                if (!lastSort[0].equals("unit")||s.equals("asc"))
+                                    return c.compare(g1.getUnit(),g2.getUnit());
+                                return c.compare(g2.getUnit(),g1.getUnit());
+                            }
+                        });
+                        loadData();
                         break;
                     case R.id.list_1_4:
-                        Toast.makeText(getContext(),"点击了售价",Toast.LENGTH_SHORT).show();
+                        lastSort=new String[]{"price",sortAction};
+                        Collections.sort(goodsList, new Comparator<Goods>() {
+                            @Override
+                            public int compare(Goods g1, Goods g2) {
+                                if (!lastSort[0].equals("price")||s.equals("asc"))
+                                    return (int)(g1.getPrice()-g2.getPrice());
+                                return (int)(g2.getPrice()-g1.getPrice());
+                            }
+                        });
+                        loadData();
                         break;
                     case R.id.list_1_5:
-                        Toast.makeText(getContext(),"点击了进货价",Toast.LENGTH_SHORT).show();
+                        lastSort=new String[]{"orig",sortAction};
+                        Collections.sort(goodsList, new Comparator<Goods>() {
+                            @Override
+                            public int compare(Goods g1, Goods g2) {
+                                if (!lastSort[0].equals("orig")||s.equals("asc"))
+                                    return (int)(g1.getOrig()-g2.getOrig());
+                                return (int)(g2.getOrig()-g1.getOrig());
+                            }
+                        });
+                        loadData();
                         break;
                 }
             }
         });
     }
 
-    private void doSearch(String searchWord){
-        if(searchWord.length()==1){
+    private void doSearch(){
+        if(nowSearchWord.length()==1){
             Toast.makeText(getContext(),"至少输入2位字符进行搜索！",Toast.LENGTH_SHORT).show();
             return;
         }
-        if ("".equals(searchWord)){
+        if ("".equals(nowSearchWord)){
             CrudService service = new CrudService(getContext());
             int count = service.getCount();
             service.close();
-            if(tableBodyDataList.size()== count){
+            if(goodsList.size()== count){
             Toast.makeText(getContext(),"请先输入关键词再进行搜索！",Toast.LENGTH_SHORT).show();
             }else{
                 tableHeader.removeAllViews();
@@ -221,7 +354,8 @@ public class DashboardFragment extends Fragment {
         }
         tableBody.removeAllViews();
         tableBodyList.clear();
-        LoadData(searchWord);
+        queryData();
+        loadData();
     }
 
     synchronized private void showGoodsInfoPage(final int rowNumber){
@@ -238,7 +372,7 @@ public class DashboardFragment extends Fragment {
         dialog.show();
         dialog.getWindow().setContentView(view);
         dialog.setCancelable(false);
-        final Goods goods = tableBodyDataList.get(rowNumber);
+        final Goods goods = goodsList.get(rowNumber);
         MainActivity.goods=goods;
         eText_name.setText(goods.getName());
         eText_name.setSelection(goods.getName().length());
@@ -277,9 +411,13 @@ public class DashboardFragment extends Fragment {
                 goodsCheck.setName(eText_name.getText().toString());
                 goodsCheck.setBarcode(tView_barcode.getText().toString());
                 String price = eText_price.getText().toString();
+                if (price.startsWith("."))price="0"+price;
+                if (price.endsWith("."))price=price+"0";
                 if(!"".equals(price))
                     goodsCheck.setPrice(Float.valueOf(price));
                 String orig = eText_orig.getText().toString();
+                if (orig.startsWith("."))orig="0"+orig;
+                if (orig.endsWith("."))orig=orig+"0";
                 if(!"".equals(orig))
                     goodsCheck.setOrig(Float.valueOf(orig));
                 /*没有改动直接关闭dialog*/
@@ -297,11 +435,15 @@ public class DashboardFragment extends Fragment {
                     tableBodyList.get(rowNumber).get(2).setText(goodsCheck.getUnit());
                     tableBodyList.get(rowNumber).get(3).setText(String.valueOf(goodsCheck.getPrice()));
                     tableBodyList.get(rowNumber).get(4).setText(String.valueOf(goodsCheck.getOrig()));
-                    tableBodyDataList.set(rowNumber,goodsCheck);
+                    goodsList.set(rowNumber,goodsCheck);
                     dialog.dismiss();
                 }
             }
         });
+    }
+
+    private void showPurOrderInfoPage(final int rowNumber){
+        Toast.makeText(getContext(),"行号："+rowNumber,Toast.LENGTH_SHORT).show();
     }
 
 }

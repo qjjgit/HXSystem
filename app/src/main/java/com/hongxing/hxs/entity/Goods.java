@@ -2,7 +2,9 @@ package com.hongxing.hxs.entity;
 
 import androidx.annotation.Nullable;
 
-public class Goods {
+
+
+public class Goods  {
     private Integer id;
     private String name;
     private String barcode;
@@ -29,6 +31,7 @@ public class Goods {
         this.price = price;
         this.orig = orig;
     }
+
 
     @Override
     public String toString() {
@@ -102,4 +105,5 @@ public class Goods {
     public void setOrig(Float orig) {
         this.orig = orig;
     }
+
 }

@@ -21,26 +21,35 @@ public class GoodsUtils{
         if ("".equals(map.get("name"))){
             list.add(" 商品名称不能为空！");
         }else goods.setName(map.get("name"));
-        if ("".equals(map.get("barcode"))
-            ||"无".equals(map.get("barcode"))){
+        String barcode = map.get("barcode");
+        if ("".equals(barcode)
+            || Objects.requireNonNull(barcode).contains("无")){
             goods.setBarcode("无");
         }else{
-            if (map.get("barcode").length()!=13)
+            if (barcode.length()!=13)
                 list.add(" 请输入正确的13位商品条码！");
-            goods.setBarcode(map.get("barcode"));
+            goods.setBarcode(barcode);
         }
         if ("请选择".equals(map.get("unit"))){
             list.add(" 请选择商品单位！");
         }else goods.setUnit(map.get("unit"));
-        if ("".equals(map.get("price"))){
+        String priceStr = map.get("price");
+//        if (Objects.requireNonNull(priceStr).startsWith("."))priceStr="0"+priceStr;
+//        if (Objects.requireNonNull(priceStr).endsWith("."))priceStr=priceStr+"0";
+        if ("".equals(priceStr)){
             list.add(" 商品售价不能为空！");
-        }else goods.setPrice(Float.valueOf(Objects.requireNonNull(map.get("price"))));
-        if ("".equals(map.get("orig"))){
+        }else if (Float.valueOf(Objects.requireNonNull(priceStr))==0f){
+            list.add(" 商品售价不能为 0！");
+        }else goods.setPrice(Float.valueOf(Objects.requireNonNull(priceStr)));
+        String origStr = map.get("orig");
+//        if (Objects.requireNonNull(origStr).startsWith("."))origStr="0"+origStr;
+//        if (Objects.requireNonNull(origStr).endsWith("."))origStr=origStr+"0";
+        if ("".equals(origStr)){
             map.put("orig","0.00");
         }else{
-            if (!"".equals(map.get("price"))){
-                float price = Float.valueOf(Objects.requireNonNull(map.get("price")));
-                float orig = Float.valueOf(Objects.requireNonNull(map.get("orig")));
+            if (!"".equals(priceStr)){
+                float price = Float.valueOf(Objects.requireNonNull(priceStr));
+                float orig = Float.valueOf(Objects.requireNonNull(origStr));
                 if (orig>price) list.add(" 售价不能低于进货价！");
             }
         }goods.setOrig(Float.valueOf(Objects.requireNonNull(map.get("orig"))));
@@ -55,17 +64,17 @@ public class GoodsUtils{
             service.close();
             return false;
         }else{
-            String name = map.get("name");
-            String unit = map.get("unit");
-            boolean exist = service.existGoodsByNameAndUnit(name,unit);
-            if (exist){
-                dialog.setMessage("已存在名称为 “"+name+"” 且单位为 “"+unit+"” 的商品,请修改名称或单位！");
-                dialog.show();
-                service.close();
-                return false;
-            }
             switch (action){
                 case DO_ADD:{
+                    String name = map.get("name");
+                    String unit = map.get("unit");
+                    boolean exist = service.existGoodsByNameAndUnit(name,unit);
+                    if (exist){
+                        dialog.setMessage("已存在名称为 “"+name+"” 且单位为 “"+unit+"” 的商品,请修改名称或单位！");
+                        dialog.show();
+                        service.close();
+                        return false;
+                    }
                     service.saveGoods(goods);
                     Toast.makeText(context, "添加成功！", Toast.LENGTH_LONG).show();
                     service.close();
