@@ -140,7 +140,7 @@ public class MainActivity extends AppCompatActivity {
         if (requestCode == REQUEST_CODE_SHOOT){
             View view= LayoutInflater.from(this).inflate(R.layout.suretoadd_purorder_page, null);
             final Bitmap bitmap_orig = BitmapFactory.decodeFile(showPIC.getPath());
-            final Bitmap bitmap_comp=centerSquareScaleBitmap(bitmap_orig, this.dip2px(150));
+            final Bitmap bitmap_comp=centerSquareScaleBitmap(bitmap_orig, 150,getResources().getDisplayMetrics().density);
             ImageView imgView=view.findViewById(R.id.img_addingPurOrder);
             imgView.setImageBitmap(bitmap_comp);
             AlertDialog.Builder builder= new AlertDialog.Builder(this);
@@ -382,7 +382,7 @@ public class MainActivity extends AppCompatActivity {
                 String imgUri = po.getDataUri();
                 map.put("origImgUri",imgUri);
                 Bitmap bitmap = BitmapFactory.decodeFile(imgUri);
-                bitmap=centerSquareScaleBitmap(bitmap,dip2px(100));
+                bitmap=centerSquareScaleBitmap(bitmap,100,getResources().getDisplayMetrics().density);
                 map.put("compImg",bitmap);
                 map.put("supplier",po.getSupplier());
                 map.put("date",po.getDate());
@@ -436,11 +436,12 @@ public class MainActivity extends AppCompatActivity {
      * @param edgeLength 正方形的边长
      * @return 裁剪后的图片
      */
-    public Bitmap centerSquareScaleBitmap(Bitmap bitmap, int edgeLength){
+    public static Bitmap centerSquareScaleBitmap(Bitmap bitmap, int edgeLength, float scale){
         if(null == bitmap || edgeLength <= 0){
             return null;
         }
         Bitmap result = bitmap;
+        edgeLength=(int)(edgeLength * scale + 0.5f);
         int width = bitmap.getWidth();
         int height = bitmap.getHeight();
         if(width > edgeLength && height > edgeLength){
@@ -467,10 +468,10 @@ public class MainActivity extends AppCompatActivity {
     }
 
     //将dp转换成px
-    public int dip2px(int dpSize){
-        final float scale = getResources().getDisplayMetrics().density;
-        return (int)(dpSize * scale + 0.5f);
-    }
+//    public int dip2px(int dpSize){
+//        final float scale = getResources().getDisplayMetrics().density;
+//        return (int)(dpSize * scale + 0.5f);
+//    }
 
     //导出数据
     public void exportDB(View view){

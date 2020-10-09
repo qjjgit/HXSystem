@@ -8,9 +8,11 @@ import com.hongxing.hxs.db.DBManager;
 import com.hongxing.hxs.entity.Goods;
 import com.hongxing.hxs.entity.PurchaseOrder;
 
+import java.io.File;
 import java.io.UnsupportedEncodingException;
 import java.text.ParseException;
 import java.util.ArrayList;
+import java.util.Arrays;
 
 public class CrudService {
 //    private DatabaseHelper databaseHelper;
@@ -37,14 +39,19 @@ public class CrudService {
     }
 
     public void savePurchaseOrder(int goodsId,PurchaseOrder purchaseOrder) {
-        String sql1="insert into pur_order('id','supplier','date','data_uri') values(?,?,?,?)";
-        db.execSQL(sql1,new Object[]{purchaseOrder.getId(),purchaseOrder.getSupplier(),purchaseOrder.getDate(),purchaseOrder.getDataUri()});
-
-        String sql2="insert into goods_pur_o('goods_id','pur_id') values(?,?)";
-        db.execSQL(sql2,new Object[]{goodsId,purchaseOrder.getId()});
+        db.beginTransaction();
+        try {
+            String sql1="insert into pur_order('id','supplier','date','data_uri') values(?,?,?,?)";
+            db.execSQL(sql1,new Object[]{purchaseOrder.getId(),purchaseOrder.getSupplier(),purchaseOrder.getDate(),purchaseOrder.getDataUri()});
+            String sql2="insert into goods_pur_o('goods_id','pur_id') values(?,?)";
+            db.execSQL(sql2,new Object[]{goodsId,purchaseOrder.getId()});
+            db.setTransactionSuccessful();
+        }finally {
+            db.endTransaction();
+        }
     }
 
-    public ArrayList<PurchaseOrder> getPurOrderListByGoodsId(int goodsId) throws ParseException {
+    public ArrayList<PurchaseOrder> getPurOrderListByGoodsId(int goodsId) {
         String sql="select * from pur_order where id in(select pur_id from goods_pur_o where goods_id=?)";
         Cursor cursor= db.rawQuery(sql,new String[]{String.valueOf(goodsId)});
         ArrayList<PurchaseOrder> list = new ArrayList<>();
@@ -59,11 +66,30 @@ public class CrudService {
     }
 
     //删除数据的方法
-    public void deleteById(int id) {
+    public void deleteGoodsById(int id) {
 //        SQLiteDatabase db=databaseHelper.getWritableDatabase();
         String sql = "delete from goodsdata where id=?";
         db.execSQL(sql, new Object[]{id});
 //        db.close();
+    }
+
+    //删除 进货单、对应的中间表、磁盘中的img文件
+    public boolean deletePurOrder(PurchaseOrder purO){
+        String sql1="delete from goods_pur_o where id=\""+purO.getId()+"\"";
+        String sql2="delete from pur_order where id=\""+purO.getId()+"\"";
+        try {
+            db.beginTransaction();//开启事务
+            db.execSQL(sql1);
+            db.execSQL(sql2);
+            File file = new File(purO.getDataUri());
+            file.delete();
+            db.setTransactionSuccessful();//声明事务成功
+            return true;
+        }catch (Exception e){
+            return false;
+        }finally {
+            db.endTransaction();//结束事务
+        }
     }
 
     //修改数据的方法
@@ -122,6 +148,17 @@ public class CrudService {
         return goods;
     }
 
+    public ArrayList<String> getDistinctGoodsList(){
+        String sql = "select DISTINCT name from goodsdata";
+        Cursor cursor= db.rawQuery(sql,null);
+        ArrayList<String> list = new ArrayList<>();
+        while(cursor.moveToNext()){
+            String name =cursor.getString(cursor.getColumnIndex("name"));
+            list.add(name);
+        }
+        return list;
+    }
+
     //查询分页数据的方法
     public ArrayList<Goods> findByPage(int min,int page,String word,String orderBy,String sortAction) {
         ArrayList<Goods> list = new ArrayList<>();
@@ -157,7 +194,7 @@ public class CrudService {
             String id =cursor.getString(cursor.getColumnIndex("id"));
             String supplier=cursor.getString(cursor.getColumnIndex("supplier"));
             String date=cursor.getString(cursor.getColumnIndex("date"));
-            String uri=cursor.getString(cursor.getColumnIndex("uri"));
+            String uri=cursor.getString(cursor.getColumnIndex("data_uri"));
             list.add(new PurchaseOrder(id,supplier,date,uri));
         }
         return list;

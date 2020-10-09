@@ -22,39 +22,55 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
-        <Button
+        <TextView
             android:id="@+id/btn_search"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="查找"
+            android:padding="5dp"
+            android:background="#ddd"
+            android:textColor="#333"
+            android:textSize="18sp"
+            app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toEndOf="@+id/text_search"
             app:layout_constraintTop_toTopOf="@+id/text_search" />
 
-        <Button
+        <TextView
             android:id="@+id/btn_add"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="5dp"
             android:onClick="addGoodsClick"
             android:text="添加商品"
+            android:padding="5dp"
+            android:background="#ddd"
+            android:textColor="#333"
+            android:textSize="18sp"
+            app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toEndOf="@+id/btn_search"
-            app:layout_constraintTop_toTopOf="@+id/btn_search" />
+            app:layout_constraintTop_toTopOf="parent" />
 
-        <Button
+        <TextView
             android:id="@+id/btn_jumpPage"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="5dp"
-            android:text="进货单列表"
+            android:text=" 进货单 "
+            android:padding="5dp"
+            android:background="#ddd"
+            android:textColor="#333"
+            android:textSize="18sp"
+            app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toEndOf="@+id/btn_add"
             app:layout_constraintTop_toTopOf="parent" />
+
     </androidx.constraintlayout.widget.ConstraintLayout>
 
 
 <!--    固定表头位置-->
     <LinearLayout
         android:id="@+id/MyTableHeader"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical">
     </LinearLayout>
@@ -69,7 +85,6 @@
             android:layout_height="wrap_content"
             android:scrollbarAlwaysDrawHorizontalTrack="false"
             android:scrollbars="none">
-
             <LinearLayout
                 android:id="@+id/MyTable"
                 android:layout_width="wrap_content"

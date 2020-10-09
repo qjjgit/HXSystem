@@ -1,24 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:orientation="horizontal" android:layout_width="match_parent"
+    android:orientation="horizontal" android:layout_width="wrap_content"
     android:layout_height="wrap_content"
-    android:background="#666">
+    android:background="#777">
 
     <ImageView
         android:id="@+id/pur_img_item"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="25dp"
-        android:layout_marginBottom="25dp"
-        android:layout_marginStart="10dp"
+        android:layout_marginTop="5dp"
+        android:layout_marginBottom="5dp"
+        android:layout_marginStart="20dp"
         android:layout_marginEnd="10dp"
-        android:minWidth="180dp"
-        android:minHeight="180dp"/>
+        android:minWidth="100dp"
+        android:minHeight="100dp"/>
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="wrap_content"
-        android:layout_height="230dp"
+        android:layout_height="110dp"
         android:orientation="vertical">
 
         <TextView
@@ -26,8 +26,8 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
-            android:layout_marginTop="24dp"
-            android:minWidth="160dp"
+            android:layout_marginTop="8dp"
+            android:minWidth="186dp"
             android:padding="5dp"
             android:textColor="#eee"
             android:textSize="22sp"
@@ -39,13 +39,29 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
-            android:layout_marginBottom="24dp"
-            android:minWidth="160dp"
+            android:layout_marginBottom="8dp"
+            android:minWidth="186dp"
             android:padding="5dp"
             android:textColor="#eee"
             android:textSize="20sp"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toStartOf="parent" />
     </androidx.constraintlayout.widget.ConstraintLayout>
+
+        <TextView
+            android:id="@+id/pur_btn_item"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:background="@drawable/black_bottom_border"
+            android:layout_marginStart="5dp"
+            android:paddingStart="2dp"
+            android:paddingTop="6dp"
+            android:paddingBottom="6dp"
+            android:paddingEnd="0sp"
+            android:text="操作"
+            android:ems="1"
+            android:gravity="center_vertical"
+            android:textColor="@color/colorAccent"
+            android:textSize="26sp"/>
 
 </LinearLayout>
