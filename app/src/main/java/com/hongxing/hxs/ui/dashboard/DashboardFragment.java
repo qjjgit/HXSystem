@@ -11,7 +11,6 @@ import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Handler;
 import android.util.DisplayMetrics;
-import android.view.Display;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -30,6 +29,7 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.ColorRes;
 import androidx.annotation.Nullable;
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
@@ -43,11 +43,8 @@ import com.hongxing.hxs.entity.PurchaseOrder;
 import com.hongxing.hxs.service.CrudService;
 import com.hongxing.hxs.utils.GoodsUtils;
 
-import org.w3c.dom.Text;
-
 import java.text.Collator;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -102,10 +99,11 @@ public class DashboardFragment extends Fragment {
                 searchTextV.setText(nowSearchWord);
                 tableHeader.removeAllViews();
                 tableBody.removeAllViews();
-                if (nowListPage==0x00)initTableHeader();
-                if (purOrderList==null||purOrderList.isEmpty()||goodsList.isEmpty())
-                queryData();
-                loadData();
+//                if (nowListPage==0x00)initTableHeader();
+//                if (purOrderList==null||purOrderList.isEmpty()||goodsList.isEmpty())
+//                queryData();
+//                loadData();
+                AsynchronousLoading();
             }
             });
             AsynchronousLoading();
@@ -126,6 +124,7 @@ public class DashboardFragment extends Fragment {
                 boolean post = uiHandler.post(new Runnable() {
                     @Override
                     public void run() {
+                        if (nowListPage==0x00)
                         initTableHeader();
                         queryData();
                         loadData();
@@ -179,10 +178,9 @@ public class DashboardFragment extends Fragment {
                         nowSearchWord,null,null);
             }
             case 0x01:{
-                purOrderList=service.findPurOrderByWord(null);
+                purOrderList=service.findPurOrderByWord(nowSearchWord);
             }
-        }
-        service.close();
+        }service.close();
     }
 
     private void loadData(){
@@ -244,9 +242,9 @@ public class DashboardFragment extends Fragment {
                     tableBody.addView(child);
                     return;
                 }
-                float scale = context.getResources().getDisplayMetrics().density;
+                final float scale = context.getResources().getDisplayMetrics().density;
                 for(int i=0;i<purOrderList.size();i++){
-                    LinearLayout row=(LinearLayout) LayoutInflater.from(context).inflate(R.layout.list_item,null);
+                    final LinearLayout row=(LinearLayout) LayoutInflater.from(context).inflate(R.layout.list_item,null);
                     if (i%2!=0) row.setBackgroundColor(Color.parseColor("#555555"));
                     final PurchaseOrder purchaseOrder = purOrderList.get(i);
                     Bitmap bitmap = BitmapFactory.decodeFile(purchaseOrder.getDataUri());
@@ -260,10 +258,11 @@ public class DashboardFragment extends Fragment {
                             showPurOrderInfoPage(purchaseOrder);
                         }
                     });
+                    final int rowIndex=i;
                     row.findViewById(R.id.pur_btn_item).setOnClickListener(new View.OnClickListener() {
                         @Override
                         public void onClick(View view) {
-                            final String[] items = { "   添加相关联的商品","   删除当前进货单"
+                            final String[] items = { "   添加/删除相关联的商品","   删除当前进货单"
                                ,"                                                       返回"};
                             AlertDialog.Builder listDialog = new AlertDialog.Builder(context);
                             listDialog.setIcon(R.drawable.operating);
@@ -277,54 +276,37 @@ public class DashboardFragment extends Fragment {
                                             AlertDialog.Builder builder= new AlertDialog.Builder(context);
                                             final Dialog dialogChoose= builder.create();
                                             dialogChoose.show();
-                                            View root= LayoutInflater.from(context).inflate(R.layout.fragment_dashboard, null);
+                                            final View root= LayoutInflater.from(context).inflate(R.layout.fragment_dashboard, null);
                                             root.findViewById(R.id.btn_add).setAlpha(0f);
                                             root.findViewById(R.id.btn_add).setEnabled(false);
                                             root.findViewById(R.id.btn_jumpPage).setAlpha(0f);
                                             root.findViewById(R.id.btn_jumpPage).setEnabled(false);
-                                            final ArrayList<String> goodsNameChoices = new ArrayList<>();
-                                            final String[] items=getChooseItems();
-                                            LinearLayout tableBody=root.findViewById(R.id.MyTable);
-                                            for (String itemStr : items) {
-                                                final CheckBox item = new CheckBox(context);
-                                                item.setText(itemStr);
-                                                final String goodsName = itemStr.substring(itemStr.lastIndexOf(" ")+1);
-                                                item.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-                                                    @Override
-                                                    public void onCheckedChanged(CompoundButton compoundButton, boolean isChecked) {
-                                                        if (isChecked) {
-                                                            goodsNameChoices.add(goodsName);
-                                                        } else {
-                                                            goodsNameChoices.remove(goodsName);
-                                                        }
-                                                    }
-                                                });
-                                                tableBody.addView(item);
-                                            }
-                                            LinearLayout header = root.findViewById(R.id.MyTableHeader);
-                                            header.setOrientation(LinearLayout.HORIZONTAL);
-                                            header.setGravity(Gravity.END);
-                                            header.setPadding(0, 1, 15, 1);
-                                            Button button = new Button(context);
-                                            button.setText("提交");
-                                            button.setOnClickListener(new View.OnClickListener() {
-                                                @Override
-                                                public void onClick(View view) {
-                                                    dialogChoose.dismiss();
-                                                    Toast.makeText(context, "关联了 "+goodsNameChoices.size()+" 个商品", Toast.LENGTH_SHORT).show();
-                                                }
-                                            });
-                                            header.addView(button);
                                             Window dialogWindow = dialogChoose.getWindow();
                                             dialogWindow.setContentView(root);
+                                            dialogWindow.clearFlags(WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM);
                                             DisplayMetrics metrics = new DisplayMetrics();
                                             dialogWindow.getWindowManager().getDefaultDisplay().getRealMetrics(metrics);
                                             WindowManager.LayoutParams attr = dialogWindow.getAttributes();
                                             attr.height=(int)(metrics.heightPixels*0.9f);
-                                            attr.width=(int)(metrics.widthPixels*1.1f);
-                                            attr.gravity= Gravity.START&Gravity.BOTTOM;
+                                            attr.width=(int)(metrics.widthPixels*1f);
+                                            attr.gravity= Gravity.FILL_HORIZONTAL;
                                             attr.alpha=1f;
                                             dialogWindow.setAttributes(attr);
+                                            final LinearLayout header = root.findViewById(R.id.MyTableHeader);
+                                            final LinearLayout tableBody=root.findViewById(R.id.MyTable);
+                                            loadChoiceDialogItems(context,dialogChoose,header,tableBody,purchaseOrder,null);
+                                            //查询
+                                            final EditText et=root.findViewById(R.id.text_search);
+                                            (root.findViewById(R.id.btn_search)).setOnClickListener(new View.OnClickListener() {
+                                                @Override
+                                                public void onClick(View view) {
+                                                    final String word = et.getText().toString().replaceAll(" ", "");
+                                                    et.setText(word);et.setSelection(word.length());
+                                                    header.removeAllViews();
+                                                    tableBody.removeAllViews();
+                                                    loadChoiceDialogItems(context,dialogChoose,header,tableBody,purchaseOrder,word);
+                                                }
+                                            });
                                             break;
                                         }
                                         /*删除进货单*/
@@ -332,7 +314,7 @@ public class DashboardFragment extends Fragment {
                                             final AlertDialog.Builder alterDiaglog = new AlertDialog.Builder(context);
                                             alterDiaglog.setIcon(R.drawable.error);//图标
                                             alterDiaglog.setTitle("系统提示");//文字
-                                            alterDiaglog.setMessage(" 确定删除当前进货单吗？");//提示消息
+                                            alterDiaglog.setMessage("\n 确定删除当前进货单吗？");//提示消息
                                             //积极的选择
                                             alterDiaglog.setPositiveButton("取消", new DialogInterface.OnClickListener() {
                                                 @Override
@@ -343,9 +325,11 @@ public class DashboardFragment extends Fragment {
                                                 @Override
                                                 public void onClick(DialogInterface dialog, int which) {
                                                     CrudService service = new CrudService(context);
-                                                    boolean ok = service.deletePurOrder(purchaseOrder);
                                                     String msg="删除失败！";
-                                                    if (ok)msg="删除成功！";
+                                                    if (service.deletePurOrder(purchaseOrder)){
+                                                        msg="删除成功！";
+                                                        row.removeViewAt(rowIndex);
+                                                    }service.close();
                                                     Toast.makeText(context,msg,Toast.LENGTH_SHORT).show();
                                                 }
                                             });
@@ -458,9 +442,12 @@ public class DashboardFragment extends Fragment {
         }
         if ("".equals(nowSearchWord)){
             CrudService service = new CrudService(getContext());
-            int count = service.getCount();
+            boolean count;
+            if (nowListPage==0x00){
+                count=goodsList.size()==service.getGoodsCount();
+            }else count =purOrderList.size()==service.getPurOrderCount();
             service.close();
-            if(goodsList.size()== count){
+            if(count){
             Toast.makeText(getContext(),"请先输入关键词再进行搜索！",Toast.LENGTH_SHORT).show();
             }else{
                 tableHeader.removeAllViews();
@@ -475,16 +462,116 @@ public class DashboardFragment extends Fragment {
         loadData();
     }
 
-    private String[] getChooseItems(){
-        ArrayList<String> items = new ArrayList<>();
+    private ArrayList<ArrayList<String>> getChooseItemsAndDefaultSelectedList(String purId,String search){
         CrudService service = new CrudService(getContext());
-        ArrayList<String> list = service.getDistinctGoodsList();
+        ArrayList<String> goodsNames = service.getGoodsNameListByPurOrderId(purId);
+        ArrayList<String> allNameList = service.getDistinctGoodsNameList(search);
         service.close();
-        for (int i=0;i<list.size();i++){
-            String item="["+(i+1)+"]      "+list.get(i);
+        if (goodsNames==null)goodsNames=new ArrayList<>();
+        ArrayList<String> items = new ArrayList<>();
+        for ( int j=0;j<goodsNames.size();j++){
+            String item="["+(j+1)+"]      "+goodsNames.get(j);
             items.add(item);
         }
-        return items.toArray(new String[0]);
+        int i=0;
+        for (String name : allNameList){
+            if (goodsNames.contains(name))continue;
+            i++;
+            String item="["+(goodsNames.size()+i)+"]      "+ name;
+            items.add(item);
+        }
+        ArrayList<ArrayList<String>> list=new ArrayList<>();
+        list.add(items);
+        list.add(goodsNames);
+        return list;
+    }
+
+    private void loadChoiceDialogItems(final Context context,final Dialog dialogChoose,final LinearLayout header,final LinearLayout tableBody, final PurchaseOrder purchaseOrder,String word){
+        ArrayList<ArrayList<String>> itemList = getChooseItemsAndDefaultSelectedList(purchaseOrder.getId(),word);
+        final String[] items= itemList.get(0).toArray(new String[0]);
+        final ArrayList<String> defaultSelected = itemList.get(1);
+        final ArrayList<String> goodsNameChoices = new ArrayList<>();
+        for (int i=0;i<items.length;i++) {
+            if (defaultSelected.isEmpty()&&i==0){
+                TextView tv1 = new TextView(getContext());
+                String str="新增请勾选：";
+                if (defaultSelected.size()==items.length)str="\n         没有查询到相关商品";
+                tv1.setText(str);
+                tv1.setTextColor(Color.rgb(216,27,96));
+                tableBody.addView(tv1);
+            }
+            if (i==0&&defaultSelected.size()!=0){
+                try {
+                TextView tv2 = new TextView(getContext());
+                tv2.setText("已关联的：");
+                tv2.setTextColor(Color.rgb(216,27,96));
+                tableBody.addView(tv2);
+                if (defaultSelected.size()<1){
+                    tv2.setText("           无");
+                    tv2.setTextColor(Color.BLACK);
+                    tableBody.addView(tv2);
+                }
+                }catch (Exception e){
+                    Toast.makeText(getContext(),e.getMessage(),Toast.LENGTH_LONG).show();
+                }
+            }
+            String itemStr=items[i];
+            final CheckBox item = new CheckBox(context);
+            item.setText(itemStr);
+            final String goodsName = itemStr.substring(itemStr.lastIndexOf(" ")+1);
+            if (defaultSelected.contains(goodsName)){
+                goodsNameChoices.add(goodsName);
+                item.setChecked(true);}
+            item.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+                @Override
+                public void onCheckedChanged(CompoundButton compoundButton, boolean isChecked) {
+                    if (isChecked) {
+                        goodsNameChoices.add(goodsName);
+                    } else {
+                        goodsNameChoices.remove(goodsName);
+                    }
+                }
+            });
+            tableBody.addView(item);
+            if (i==defaultSelected.size()-1){
+                LinearLayout v = new LinearLayout(context);
+                v.setMinimumHeight(2);
+                WindowManager.LayoutParams attr = dialogChoose.getWindow().getAttributes();
+                v.setMinimumWidth((int)(attr.width*0.91f));
+                v.setBackgroundColor(Color.BLACK);
+                tableBody.addView(v);
+                TextView tv = new TextView(getContext());
+                String str="新增请勾选：";
+                if (defaultSelected.size()==items.length)str="\n         没有查询到相关商品";
+                tv.setText(str);
+                tv.setTextColor(Color.rgb(216,27,96));
+                tableBody.addView(tv);
+            }
+        }
+        header.setOrientation(LinearLayout.HORIZONTAL);
+        header.setGravity(Gravity.END);
+        header.setPadding(0, 1, 15, 1);
+        TextView textV = new TextView(context);
+        textV.setText("请勾选要关联的商品并点击提交    ");
+        header.addView(textV);
+        Button button = new Button(context);
+        button.setText("提交");
+        button.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if (!goodsNameChoices.equals(defaultSelected)){
+                    CrudService service = new CrudService(context);
+                    String msg="关联失败！";
+                    if (service.bindingGoods2PurOrder(goodsNameChoices,purchaseOrder.getId())) {
+                        msg="关联成功！";
+                    }
+                    service.close();
+                    Toast.makeText(context,msg,Toast.LENGTH_SHORT).show();
+                }
+                dialogChoose.dismiss();
+            }
+        });
+        header.addView(button);
     }
 
     synchronized private void showGoodsInfoPage(final int rowNumber){

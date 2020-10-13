@@ -3,6 +3,7 @@ package com.hongxing.hxs.service;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.widget.Toast;
 
 import com.hongxing.hxs.db.DBManager;
 import com.hongxing.hxs.entity.Goods;
@@ -38,6 +39,7 @@ public class CrudService {
         db.execSQL(sql, new Object[]{goods.getName(),goods.getBarcode(),goods.getUnit(),goods.getPrice(),goods.getOrig()});//执行sql语句？由数组提供
     }
 
+    //增加进货单
     public void savePurchaseOrder(int goodsId,PurchaseOrder purchaseOrder) {
         db.beginTransaction();
         try {
@@ -75,7 +77,7 @@ public class CrudService {
 
     //删除 进货单、对应的中间表、磁盘中的img文件
     public boolean deletePurOrder(PurchaseOrder purO){
-        String sql1="delete from goods_pur_o where id=\""+purO.getId()+"\"";
+        String sql1="delete from goods_pur_o where pur_id=\""+purO.getId()+"\"";
         String sql2="delete from pur_order where id=\""+purO.getId()+"\"";
         try {
             db.beginTransaction();//开启事务
@@ -128,6 +130,7 @@ public class CrudService {
         return exist;
     }
 
+    //通过barcode查询商品
     public Goods findByBarcode(String barcode) {//单条查询的方法
         Goods goods=null;
 //        SQLiteDatabase db=databaseHelper.getReadableDatabase();
@@ -148,8 +151,25 @@ public class CrudService {
         return goods;
     }
 
-    public ArrayList<String> getDistinctGoodsList(){
-        String sql = "select DISTINCT name from goodsdata";
+    /*获取去重(name重复)后的商品集合GoodsList*/
+    public ArrayList<String> getDistinctGoodsNameList(String word){
+        StringBuffer sql = new StringBuffer("select DISTINCT name from goodsdata ");
+        if (word!=null&&!"".equals(word)){
+            sql.append("where name like \"%").append(word).append("%\" or barcode = \"").append(word).append("\"");
+        }
+        Cursor cursor= db.rawQuery(String.valueOf(sql),null);
+        ArrayList<String> list = new ArrayList<>();
+        while(cursor.moveToNext()){
+            String name =cursor.getString(cursor.getColumnIndex("name"));
+            list.add(name);
+        }
+        return list;
+    }
+
+    //通过进货单id获取当前进货单所绑定的goods的name集合
+    public ArrayList<String> getGoodsNameListByPurOrderId(String id){
+        String sql = "select DISTINCT name from goodsdata where id in" +
+                "(select goods_id from goods_pur_o where pur_id=\""+id+"\")";
         Cursor cursor= db.rawQuery(sql,null);
         ArrayList<String> list = new ArrayList<>();
         while(cursor.moveToNext()){
@@ -157,6 +177,31 @@ public class CrudService {
             list.add(name);
         }
         return list;
+    }
+
+    //通过goodsName绑定goods、purOrder
+    public boolean bindingGoods2PurOrder(ArrayList<String> nameList,String purOrderId){
+        db.beginTransaction();
+        try {
+            String sql0="delete from goods_pur_o where pur_id=\""+purOrderId+"\"";
+            db.execSQL(sql0);//先清除旧数据
+                //相同的goods name都绑定同一个进货单
+                for (String name : nameList) {
+                    String sql1="select id from goodsdata where name=\""+name+"\"";
+                    Cursor cursor= db.rawQuery(sql1,null);
+                    while(cursor.moveToNext()){
+                        int id =cursor.getInt(cursor.getColumnIndex("id"));
+                        String sql="insert into goods_pur_o('goods_id','pur_id') values(?,\""+purOrderId+"\")";
+                        db.execSQL(sql,new Object[]{id});
+                    }
+            }
+            db.setTransactionSuccessful();
+            return true;
+        }catch (Exception e){
+            return false;
+        }finally {
+            db.endTransaction();
+        }
     }
 
     //查询分页数据的方法
@@ -183,6 +228,7 @@ public class CrudService {
         return list;
     }
 
+    //查询进货单
     public ArrayList<PurchaseOrder> findPurOrderByWord(String word){
         ArrayList<PurchaseOrder> list = new ArrayList<>();
         StringBuffer sql =new StringBuffer("select * from pur_order ");
@@ -200,13 +246,18 @@ public class CrudService {
         return list;
     }
 
-    //统计数据条数
-    public int getCount() {
-//        SQLiteDatabase db=databaseHelper.getReadableDatabase();
+    //统计商品数据条数
+    public int getGoodsCount() {
         String sql="select id from goodsdata";
         Cursor cursor = db.rawQuery(sql, null);
         int count = cursor.getCount();
-//        db.close();
+        return count;
+    }
+    //统计进货单数据条数
+    public int getPurOrderCount(){
+        String sql="select id from pur_order";
+        Cursor cursor = db.rawQuery(sql, null);
+        int count = cursor.getCount();
         return count;
     }
 }

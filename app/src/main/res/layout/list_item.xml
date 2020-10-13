@@ -23,24 +23,22 @@
 
         <TextView
             android:id="@+id/pur_supplier_item"
-            android:layout_width="wrap_content"
+            android:layout_width="185dp"
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
             android:layout_marginTop="8dp"
-            android:minWidth="186dp"
             android:padding="5dp"
             android:textColor="#eee"
-            android:textSize="22sp"
+            android:textSize="20sp"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
         <TextView
             android:id="@+id/pur_date_item"
-            android:layout_width="wrap_content"
+            android:layout_width="185dp"
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
             android:layout_marginBottom="8dp"
-            android:minWidth="186dp"
             android:padding="5dp"
             android:textColor="#eee"
             android:textSize="20sp"
@@ -62,6 +60,6 @@
             android:ems="1"
             android:gravity="center_vertical"
             android:textColor="@color/colorAccent"
-            android:textSize="26sp"/>
+            android:textSize="27sp"/>
 
 </LinearLayout>

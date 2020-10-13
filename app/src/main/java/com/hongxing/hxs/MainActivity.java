@@ -140,7 +140,7 @@ public class MainActivity extends AppCompatActivity {
         if (requestCode == REQUEST_CODE_SHOOT){
             View view= LayoutInflater.from(this).inflate(R.layout.suretoadd_purorder_page, null);
             final Bitmap bitmap_orig = BitmapFactory.decodeFile(showPIC.getPath());
-            final Bitmap bitmap_comp=centerSquareScaleBitmap(bitmap_orig, 150,getResources().getDisplayMetrics().density);
+            final Bitmap bitmap_comp=centerSquareScaleBitmap(bitmap_orig, 100,getResources().getDisplayMetrics().density);
             ImageView imgView=view.findViewById(R.id.img_addingPurOrder);
             imgView.setImageBitmap(bitmap_comp);
             AlertDialog.Builder builder= new AlertDialog.Builder(this);
