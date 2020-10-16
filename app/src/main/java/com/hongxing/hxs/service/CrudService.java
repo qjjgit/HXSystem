@@ -3,17 +3,13 @@ package com.hongxing.hxs.service;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
-import android.widget.Toast;
 
 import com.hongxing.hxs.db.DBManager;
 import com.hongxing.hxs.entity.Goods;
 import com.hongxing.hxs.entity.PurchaseOrder;
 
 import java.io.File;
-import java.io.UnsupportedEncodingException;
-import java.text.ParseException;
 import java.util.ArrayList;
-import java.util.Arrays;
 
 public class CrudService {
 //    private DatabaseHelper databaseHelper;
@@ -67,14 +63,6 @@ public class CrudService {
         return list;
     }
 
-    //删除数据的方法
-    public void deleteGoodsById(int id) {
-//        SQLiteDatabase db=databaseHelper.getWritableDatabase();
-        String sql = "delete from goodsdata where id=?";
-        db.execSQL(sql, new Object[]{id});
-//        db.close();
-    }
-
     //删除 进货单、对应的中间表、磁盘中的img文件
     public boolean deletePurOrder(PurchaseOrder purO){
         String sql1="delete from goods_pur_o where pur_id=\""+purO.getId()+"\"";
@@ -100,24 +88,6 @@ public class CrudService {
         db.execSQL(sql,new Object[]{
                 goods.getName(),goods.getBarcode(),goods.getUnit(),goods.getPrice(),goods.getOrig(),goods.getId()});
         db.close();
-    }
-
-    public Goods findById(int id) {//单条查询的方法
-        Goods goods=null;
-//        SQLiteDatabase db=databaseHelper.getReadableDatabase();
-        String sql = "select * from goodsdata where id=?";
-        Cursor cursor= db.rawQuery(sql,new String[]{String.valueOf(id)});
-        if(cursor.moveToFirst()){
-            int id2 =cursor.getInt(cursor.getColumnIndex("id"));
-            String name=cursor.getString(cursor.getColumnIndex("name"));
-            String barcode=cursor.getString(cursor.getColumnIndex("barcode"));
-            String unit=cursor.getString(cursor.getColumnIndex("unit"));
-            float price=cursor.getFloat(cursor.getColumnIndex("price"));
-            float orig=cursor.getFloat(cursor.getColumnIndex("orig"));
-            goods=new Goods(id2,name,barcode,unit,price,orig);
-        }
-//        db.close();
-        return goods;
     }
 
     public boolean existGoodsByNameAndUnit(String name,String unit){
@@ -205,14 +175,11 @@ public class CrudService {
     }
 
     //查询分页数据的方法
-    public ArrayList<Goods> findByPage(int min,int page,String word,String orderBy,String sortAction) {
+    public ArrayList<Goods> findByPage(int min,int page,String word) {
         ArrayList<Goods> list = new ArrayList<>();
         StringBuffer sql =new StringBuffer("select * from goodsdata ");
         if (word!=null&&!"".equals(word)){
             sql.append("where name like \"%").append(word).append("%\" or barcode = \"").append(word).append("\"");
-        }
-        if(orderBy!=null&&!"".equals(orderBy)){
-            sql.append(" order by ").append(orderBy).append(" ").append(sortAction);
         }
         sql.append(" limit ?,?");
         Cursor cursor= db.rawQuery(String.valueOf(sql),new String[]{String.valueOf(min), String.valueOf(page)});

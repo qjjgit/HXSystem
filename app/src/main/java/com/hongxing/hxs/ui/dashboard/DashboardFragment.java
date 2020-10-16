@@ -29,7 +29,6 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.annotation.ColorRes;
 import androidx.annotation.Nullable;
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
@@ -44,6 +43,8 @@ import com.hongxing.hxs.service.CrudService;
 import com.hongxing.hxs.utils.GoodsUtils;
 
 import java.text.Collator;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -91,10 +92,14 @@ public class DashboardFragment extends Fragment {
             btn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                String str=" 进货单 ";
-                if (nowListPage==0x00){nowListPage=0x01;str="商品列表";}
+                String str1=" 切换到\n 进货单 ";
+                String str2="输入名称或条码";
+                if (nowListPage==0x00){
+                    nowListPage=0x01;str1="  切换到\n商品列表";str2="输入供货商名称";
+                }
                 else nowListPage=0x00;
-                btn.setText(str);
+                searchTextV.setHint(str2);
+                btn.setText(str1);
                 nowSearchWord="";
                 searchTextV.setText(nowSearchWord);
                 tableHeader.removeAllViews();
@@ -174,11 +179,25 @@ public class DashboardFragment extends Fragment {
         final CrudService service = new CrudService(getContext());
         switch (nowListPage){
             case 0x00:{
-                goodsList = service.findByPage(0, 999,
-                        nowSearchWord,null,null);
+                goodsList = service.findByPage(0, 999,nowSearchWord);
             }
             case 0x01:{
                 purOrderList=service.findPurOrderByWord(nowSearchWord);
+                final SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
+                Collections.sort(purOrderList, new Comparator<PurchaseOrder>() {
+                    @Override
+                    public int compare(PurchaseOrder p1, PurchaseOrder p2) {
+                        try {
+                            long d1 = format.parse(p1.getDate()).getTime();
+                            long d2 = format.parse(p2.getDate()).getTime();
+                            if(d1<d2)return 1;
+                            if(d1>d2)return -1;
+                        } catch (ParseException e) {
+                            Toast.makeText(getContext(),e.getMessage(),Toast.LENGTH_SHORT).show();
+                        }
+                        return 0;
+                    }
+                });
             }
         }service.close();
     }
@@ -258,7 +277,7 @@ public class DashboardFragment extends Fragment {
                             showPurOrderInfoPage(purchaseOrder);
                         }
                     });
-                    final int rowIndex=i;
+//                    final int rowIndex=i;
                     row.findViewById(R.id.pur_btn_item).setOnClickListener(new View.OnClickListener() {
                         @Override
                         public void onClick(View view) {
@@ -328,7 +347,7 @@ public class DashboardFragment extends Fragment {
                                                     String msg="删除失败！";
                                                     if (service.deletePurOrder(purchaseOrder)){
                                                         msg="删除成功！";
-                                                        row.removeViewAt(rowIndex);
+                                                        tableBody.removeView(row);
                                                     }service.close();
                                                     Toast.makeText(context,msg,Toast.LENGTH_SHORT).show();
                                                 }

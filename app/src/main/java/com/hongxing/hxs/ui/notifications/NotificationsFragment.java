@@ -1,12 +1,10 @@
 package com.hongxing.hxs.ui.notifications;
 
 import android.os.Bundle;
-import android.os.Environment;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.annotation.Nullable;
 import androidx.annotation.NonNull;
@@ -16,7 +14,6 @@ import androidx.lifecycle.ViewModelProviders;
 
 import com.hongxing.hxs.R;
 
-import java.io.File;
 
 public class NotificationsFragment extends Fragment {
 

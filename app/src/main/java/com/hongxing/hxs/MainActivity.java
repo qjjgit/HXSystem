@@ -2,7 +2,9 @@ package com.hongxing.hxs;
 
 import android.Manifest;
 import android.app.AlertDialog;
+import android.app.DatePickerDialog;
 import android.app.Dialog;
+import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -13,6 +15,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.Handler;
 import android.provider.MediaStore;
 import android.text.TextUtils;
 import android.view.KeyEvent;
@@ -20,6 +23,8 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.AdapterView;
+import android.widget.Button;
+import android.widget.DatePicker;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.ListView;
@@ -34,12 +39,12 @@ import com.hongxing.hxs.entity.Goods;
 import com.hongxing.hxs.entity.PurchaseOrder;
 import com.hongxing.hxs.other.MyViewBinder;
 import com.hongxing.hxs.service.CrudService;
-import com.hongxing.hxs.utils.DateUtils;
 import com.hongxing.hxs.utils.GoodsUtils;
 import com.huawei.hms.hmsscankit.ScanUtil;
 import com.huawei.hms.ml.scan.HmsScan;
 import com.huawei.hms.ml.scan.HmsScanAnalyzerOptions;
 
+import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.FileProvider;
 import androidx.navigation.NavController;
@@ -49,8 +54,8 @@ import androidx.navigation.ui.NavigationUI;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -110,6 +115,7 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.N)
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         //receive result after your activity finished scanning
@@ -156,20 +162,34 @@ public class MainActivity extends AppCompatActivity {
                     showPIC.delete();
                 }
             });
-            final EditText addPurOrder_date= view.findViewById(R.id.addPurOrder_date);
+            final Button addPurOrder_date= view.findViewById(R.id.addPurOrder_date);
+            addPurOrder_date.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    DatePickerDialog datePickerDialog = new DatePickerDialog(MainActivity.this, DatePickerDialog.THEME_HOLO_LIGHT);
+                    datePickerDialog.getDatePicker().setMaxDate(new Date().getTime());
+                    datePickerDialog.setOnDateSetListener(new DatePickerDialog.OnDateSetListener() {
+                        @Override
+                        public void onDateSet(DatePicker datePicker, int year, int month, int day) {
+                            addPurOrder_date.setText(year +"-"+(month+1)+"-"+day);
+                        }
+                    });
+                    datePickerDialog.show();
+                }
+            });
             final EditText addPurOrder_supplier= view.findViewById(R.id.addPurOrder_supplier);
             (view.findViewById(R.id.addPurOrder_ok)).setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View view) {
-                    String strDate = (addPurOrder_date.getText().toString()).replace(" ","");
-                    if ("".equals(strDate)){
-                        Toast.makeText(getApplicationContext(),"请先填入进货单的年月日时间！",Toast.LENGTH_SHORT).show();
+                    String strDate = addPurOrder_date.getText().toString();
+                    if ("请选择".equals(strDate)){
+                        Toast.makeText(getApplicationContext(),"请先填入进货单的日期！",Toast.LENGTH_SHORT).show();
                         return;
                     }
-                    if (!DateUtils.isValidDate(strDate)){
-                        Toast.makeText(getApplicationContext(),"请填入正确的年月日！",Toast.LENGTH_SHORT).show();
-                        return;
-                    }
+//                    if (){
+//                        Toast.makeText(getApplicationContext(),"请填入正确的年月日！",Toast.LENGTH_SHORT).show();
+//                        return;
+//                    }
                     String supplier =addPurOrder_supplier.getText().toString().replaceAll(" ","");
                     if (supplier.length()<1)supplier="未填写";
                     sureToAdd_purOrder(bitmap_comp,strDate,supplier);
@@ -181,42 +201,27 @@ public class MainActivity extends AppCompatActivity {
     }
     //确认添加进货单
     public void sureToAdd_purOrder(Bitmap bitmap_comp,String strDate,String supplier){
-        //将图片转化为位图
-//        int size = bitmap.getWidth() * bitmap.getHeight() * 4;
-//        int byteCount = bitmap_orig.getByteCount();
-        //int size = 20 * 30 * 4;
-        //创建一个字节数组输出流,流的大小为size
-//        ByteArrayOutputStream baos= new ByteArrayOutputStream(byteCount);
-        try {
-            //设置位图的压缩格式，质量为100%，并放入字节数组输出流中
-//            bitmap_orig.compress(Bitmap.CompressFormat.JPEG, 100, baos);
-            //将字节数组输出流转化为字节数组byte[]
-//            byte[] imagedata = baos.toByteArray();
-            PurchaseOrder purchaseOrder = new PurchaseOrder(UUID.randomUUID().toString(),supplier,strDate,showPIC.getPath());
-            CrudService service = new CrudService(getApplicationContext());
-            service.savePurchaseOrder(goods.getId(),purchaseOrder);
-            service.close();
-            Map<String, Object> map = new HashMap<>();
-            map.put("origImgUri",showPIC.getPath());
-            map.put("compImg",bitmap_comp);
-            map.put("supplier",purchaseOrder.getSupplier());
-            map.put("date",purchaseOrder.getDate());
-            if (lists==null){
-                lists=new ArrayList<>();
-            }
-            lists.add(map);
-            if (listView_PurOrderBody!=null){
-                ((TextView)nowTopLayerView.findViewById(R.id.notFoundWord)).setTextSize(0);
-                adapter = new SimpleAdapter(this, lists, R.layout.list_item,
-                        new String[]{"compImg","supplier","date"}, new int[]{R.id.pur_img_item,R.id.pur_supplier_item,R.id.pur_date_item});
-                adapter.setViewBinder(new MyViewBinder());
-                listView_PurOrderBody.setAdapter(adapter);
-            }
-            Toast.makeText(getApplicationContext(),"进货单添加成功！",Toast.LENGTH_SHORT).show();
-        }catch (Exception e){
-//            e.printStackTrace();
-            Toast.makeText(getApplicationContext(),e.getMessage(),Toast.LENGTH_LONG).show();
+        PurchaseOrder purchaseOrder = new PurchaseOrder(UUID.randomUUID().toString(),supplier,strDate,showPIC.getPath());
+        CrudService service = new CrudService(getApplicationContext());
+        service.savePurchaseOrder(goods.getId(),purchaseOrder);
+        service.close();
+        Map<String, Object> map = new HashMap<>();
+        map.put("origImgUri",showPIC.getPath());
+        map.put("compImg",bitmap_comp);
+        map.put("supplier",purchaseOrder.getSupplier());
+        map.put("date",purchaseOrder.getDate());
+        if (lists==null){
+            lists=new ArrayList<>();
         }
+        lists.add(map);
+        if (listView_PurOrderBody!=null){
+            ((TextView)nowTopLayerView.findViewById(R.id.notFoundWord)).setTextSize(0);
+            adapter = new SimpleAdapter(this, lists, R.layout.list_item,
+                    new String[]{"compImg","supplier","date"}, new int[]{R.id.pur_img_item,R.id.pur_supplier_item,R.id.pur_date_item});
+            adapter.setViewBinder(new MyViewBinder());
+            listView_PurOrderBody.setAdapter(adapter);
+        }
+        Toast.makeText(getApplicationContext(),"进货单添加成功！",Toast.LENGTH_SHORT).show();
     }
 
     //通过barcode设置当前goods属性
@@ -324,7 +329,6 @@ public class MainActivity extends AppCompatActivity {
     public void showPurchaseOrderPage(View view){
         final Context context = this;
         View root= LayoutInflater.from(context).inflate(R.layout.purchaseorder_page, null);
-        root.setSystemUiVisibility(View.SYSTEM_UI_FLAG_VISIBLE);// TODO: 2020/10/6 看看有没有用
         nowTopLayerView=root;
         AlertDialog.Builder builder= new AlertDialog.Builder(context,R.style.Dialog_Fullscreen);
         final Dialog dialog= builder.create();
@@ -354,7 +358,7 @@ public class MainActivity extends AppCompatActivity {
                 dialog.show();
                 dialog.getWindow().setContentView(root);
                 ImageView imgV=root.findViewById(R.id.img_fullscreen);
-                if (lists.get(i).get("origImgUri") instanceof String){
+                if (new File((String)lists.get(i).get("origImgUri")).exists()){
                     String uri=(String) lists.get(i).get("origImgUri");
                     Bitmap bitmap = BitmapFactory.decodeFile(uri);
                     imgV.setImageBitmap(bitmap);
@@ -369,33 +373,55 @@ public class MainActivity extends AppCompatActivity {
             }
         });
         CrudService service = new CrudService(context);
-        try {
-            ArrayList<PurchaseOrder> purOrderList = service.getPurOrderListByGoodsId(goods.getId());
-            service.close();
-            TextView textV_notFound=root.findViewById(R.id.notFoundWord);
-            if (purOrderList.size()<1){
-                textV_notFound.setTextSize(24);
-                return;
-            }
-            for (PurchaseOrder po : purOrderList) {
-                Map<String,Object> map=new HashMap<>();
-                String imgUri = po.getDataUri();
-                map.put("origImgUri",imgUri);
-                Bitmap bitmap = BitmapFactory.decodeFile(imgUri);
-                bitmap=centerSquareScaleBitmap(bitmap,100,getResources().getDisplayMetrics().density);
-                map.put("compImg",bitmap);
-                map.put("supplier",po.getSupplier());
-                map.put("date",po.getDate());
-                lists.add(map);
-            }
-            adapter = new SimpleAdapter(this, lists, R.layout.list_item,
-                    new String[]{"compImg","supplier","date"}, new int[]{R.id.pur_img_item,R.id.pur_supplier_item,R.id.pur_date_item});
-            adapter.setViewBinder(new MyViewBinder());
-            listView_PurOrderBody.setAdapter(adapter);
-        } catch (Exception e) {
-            Toast.makeText(this,e.getMessage(),Toast.LENGTH_LONG).show();
-//            e.printStackTrace();
+        final ArrayList<PurchaseOrder> purOrderList = service.getPurOrderListByGoodsId(goods.getId());
+        service.close();
+        TextView textV_notFound=root.findViewById(R.id.notFoundWord);
+        if (purOrderList.size()<1){
+            textV_notFound.setTextSize(24);
+            return;
         }
+        final ProgressDialog progressDialog = new ProgressDialog(context);
+        progressDialog.setProgress(0);
+        progressDialog.setMessage("加载中...");
+        progressDialog.setIndeterminate(true);
+        progressDialog.setCancelable(false);
+        progressDialog.setMax(10);
+        progressDialog.show();
+        final Handler handler = new Handler();
+        final Thread thread = new Thread(){
+            public void run() {
+                boolean post = handler.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        for (PurchaseOrder po : purOrderList) {
+                            Map<String,Object> map=new HashMap<>();
+                            String imgUri = po.getDataUri();
+                            map.put("origImgUri",imgUri);
+                            Bitmap bitmap = BitmapFactory.decodeFile(imgUri);
+                            bitmap=centerSquareScaleBitmap(bitmap,100,getResources().getDisplayMetrics().density);
+                            map.put("compImg",bitmap);
+                            map.put("supplier",po.getSupplier());
+                            map.put("date",po.getDate());
+                            lists.add(map);
+                        }
+                        adapter = new SimpleAdapter(MainActivity.this, lists, R.layout.list_item,
+                                new String[]{"compImg","supplier","date"}, new int[]{R.id.pur_img_item,R.id.pur_supplier_item,R.id.pur_date_item});
+                        adapter.setViewBinder(new MyViewBinder());
+                        listView_PurOrderBody.setAdapter(adapter);
+                    }
+                });
+                if (post){
+                    try {
+                        sleep(500);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                    progressDialog.setProgress(10);
+                    progressDialog.cancel();
+                }
+            }
+        };
+        thread.start();
     }
 
     //添加进货单  by click
