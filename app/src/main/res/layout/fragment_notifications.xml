@@ -20,8 +20,7 @@
         app:layout_constraintTop_toTopOf="parent" />
 
     <Button
-        android:id="@+id/btn_exportDB"
-        android:onClick="exportDB"
+        android:id="@+id/btn_exportData"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="24dp"
@@ -29,4 +28,13 @@
         android:text="数据备份"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/text_notifications" />
+    <Button
+        android:id="@+id/btn_importData"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:layout_marginEnd="16dp"
+        android:text="导入数据"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/btn_exportData" />
 </androidx.constraintlayout.widget.ConstraintLayout>

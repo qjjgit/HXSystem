@@ -282,7 +282,7 @@ public class DashboardFragment extends Fragment {
                         @Override
                         public void onClick(View view) {
                             final String[] items = { "   添加/删除相关联的商品","   删除当前进货单"
-                               ,"                                                       返回"};
+                               ,"                                                   返回"};
                             AlertDialog.Builder listDialog = new AlertDialog.Builder(context);
                             listDialog.setIcon(R.drawable.operating);
                             listDialog.setTitle("请选择");

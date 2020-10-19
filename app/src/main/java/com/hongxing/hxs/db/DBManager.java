@@ -1,38 +1,30 @@
 package com.hongxing.hxs.db;
 
 import android.content.Context;
-import android.content.res.AssetFileDescriptor;
-import android.content.res.AssetManager;
 import android.database.sqlite.SQLiteDatabase;
 import android.util.Log;
 
 import com.hongxing.hxs.MainActivity;
-import com.hongxing.hxs.service.CrudService;
+import com.hongxing.hxs.utils.ZIPUtils;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileDescriptor;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.lang.reflect.Array;
-import java.sql.Blob;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Date;
+import java.util.Locale;
 
 public class DBManager {
     //数据库存储路径
     private static String DB_NAME = "hxs.s3db";
-    //数据库存放的文件夹 data/data/com.main.jh 下面
-    private static String pathStr = "data/data/com.hongxing.hxs/databases";
+    //数据库存放的文件夹 SD卡 Android/data/com.hongxing.hxs/files/databases 下面
+    private static String pathStr =MainActivity.APPStoragePath+File.separator+"databases";
 
-    private static File jhPath=new File(pathStr+"/"+DB_NAME);
+    private static File jhPath=new File(pathStr+File.separator+DB_NAME);
 
     public static SQLiteDatabase openDatabase(Context context){
 
@@ -104,22 +96,31 @@ public class DBManager {
 
     public static boolean exportDBFileToDir(String dir){
         try {
-            BufferedInputStream inputStream= new BufferedInputStream(new FileInputStream(jhPath));
-            String filePath=dir+File.separator
-                    +new SimpleDateFormat("yyyy-MM-dd_HH.mm.ss备份").format(new Date())
-                    +".s3db";
-            BufferedOutputStream outputStream= new BufferedOutputStream(new FileOutputStream(filePath));
-            int j;
-            byte[] bytes2 =new byte[1024];
-            while((j=inputStream.read(bytes2))!=-1) {
-                outputStream.write(bytes2,0,j);
-            }
-            inputStream.close();
-            outputStream.close();
+        String zipFilePath=dir+File.separator
+                +new SimpleDateFormat("yyyy-MM-dd_HH.mm.ss备份", Locale.CHINA).format(new Date())
+                +".zip";
+            ZIPUtils.compress(MainActivity.APPStoragePath,zipFilePath);
             return true;
         }catch (Exception e){
-            e.printStackTrace();
             return false;
         }
+//        try {
+//            BufferedInputStream inputStream= new BufferedInputStream(new FileInputStream(jhPath));
+//            String filePath=dir+File.separator
+//                    +new SimpleDateFormat("yyyy-MM-dd_HH.mm.ss备份").format(new Date())
+//                    +".s3db";
+//            BufferedOutputStream outputStream= new BufferedOutputStream(new FileOutputStream(filePath));
+//            int j;
+//            byte[] bytes2 =new byte[1024];
+//            while((j=inputStream.read(bytes2))!=-1) {
+//                outputStream.write(bytes2,0,j);
+//            }
+//            inputStream.close();
+//            outputStream.close();
+//            return true;
+//        }catch (Exception e){
+//            e.printStackTrace();
+//            return false;
+//        }
     }
 }

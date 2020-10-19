@@ -77,6 +77,7 @@ public class MainActivity extends AppCompatActivity {
     private List<Map<String,Object>> lists=null;
     private SimpleAdapter adapter=null;
     private File showPIC=null;
+    public static String APPStoragePath;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -91,7 +92,13 @@ public class MainActivity extends AppCompatActivity {
         NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment);
         NavigationUI.setupActionBarWithNavController(this, navController, appBarConfiguration);
         NavigationUI.setupWithNavController(navView, navController);
+        APPStoragePath=getExternalFilesDir(null).getPath();
         DBManager.openDatabase(this).close();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            this.requestPermissions(
+                    new String[]{Manifest.permission.CAMERA, Manifest.permission.READ_EXTERNAL_STORAGE},
+                    0X03);
+        }
     }
     /*开始扫码*/
     public void btnScanClick(View v){
@@ -107,12 +114,10 @@ public class MainActivity extends AppCompatActivity {
         if (permissions == null || grantResults == null || grantResults.length < 2 || grantResults[0] != PackageManager.PERMISSION_GRANTED || grantResults[1] != PackageManager.PERMISSION_GRANTED) {
             return;
         }
-
         if (requestCode == DEFAULT_VIEW) {
             //start ScankitActivity for scanning barcode
             ScanUtil.startScan(MainActivity.this, REQUEST_CODE_SCAN, new HmsScanAnalyzerOptions.Creator().setHmsScanTypes(HmsScan.ALL_SCAN_TYPE).create());
         }
-
     }
 
     @RequiresApi(api = Build.VERSION_CODES.N)
@@ -438,11 +443,8 @@ public class MainActivity extends AppCompatActivity {
 
     //创建进货单图像文件
     public File createPhotoFile() {
-//        String strdir=Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES).getPath()
-//                +File.separator+"HongXing";
         /*若要修改路径，需同时修改file_paths.xml内声明的根目录*/
-        String strdir=this.getExternalFilesDir(null).getPath()
-                +File.separator+"PurchaseOrder";
+        String strdir=APPStoragePath+File.separator+"PurchaseOrder";
         File stordir = new File(strdir);
         if (!stordir.exists()) stordir.mkdir();
         //获得公共目录下的图片文件路径
@@ -498,18 +500,6 @@ public class MainActivity extends AppCompatActivity {
 //        final float scale = getResources().getDisplayMetrics().density;
 //        return (int)(dpSize * scale + 0.5f);
 //    }
-
-    //导出数据
-    public void exportDB(View view){
-        String strdir=Environment.getExternalStorageDirectory().getPath()
-                +File.separator+"鸿兴系统";
-        File file = new File(strdir);
-        if (!file.exists())file.mkdir();
-        boolean success = DBManager.exportDBFileToDir(strdir);
-        String msg="备份失败！";
-        if (success) msg="已备份到"+strdir;
-        Toast.makeText(this,msg,Toast.LENGTH_LONG).show();
-    }
 
     /* 回退按钮两次退出 */
     @Override
