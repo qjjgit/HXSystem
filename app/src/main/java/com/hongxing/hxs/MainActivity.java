@@ -96,7 +96,10 @@ public class MainActivity extends AppCompatActivity {
         DBManager.openDatabase(this).close();
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             this.requestPermissions(
-                    new String[]{Manifest.permission.CAMERA, Manifest.permission.READ_EXTERNAL_STORAGE},
+                    new String[]{
+                            Manifest.permission.CAMERA,
+                            Manifest.permission.READ_EXTERNAL_STORAGE,
+                            Manifest.permission.WRITE_EXTERNAL_STORAGE},
                     0X03);
         }
     }
@@ -435,7 +438,7 @@ public class MainActivity extends AppCompatActivity {
         File file = createPhotoFile();
         if (file!=null){
             showPIC=file;
-            Uri imgUri= FileProvider.getUriForFile(this, "comgin.example.root.hightqualitycame.fileprovider", file);
+            Uri imgUri= FileProvider.getUriForFile(this,getPackageName()+".fileprovider", file);
             intent.putExtra(MediaStore.EXTRA_OUTPUT,imgUri);//指定系统相机拍照保存在imageFileUri所指的位置
         }
         startActivityForResult(intent, REQUEST_CODE_SHOOT);

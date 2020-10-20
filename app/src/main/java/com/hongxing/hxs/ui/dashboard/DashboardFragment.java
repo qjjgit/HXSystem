@@ -209,8 +209,7 @@ public class DashboardFragment extends Fragment {
                 if(goodsList.size()<1){
                     TextView child = new TextView(getContext());
                     child.setTextSize(20);
-                    child.setWidth(1000);
-                    child.setPadding(10,20,0,0);
+                    child.setPadding(200,20,0,0);
                     child.setTextAlignment(View.TEXT_ALIGNMENT_CENTER);
                     child.setText("没有查询到相关商品！");
                     tableBody.addView(child);
@@ -254,8 +253,7 @@ public class DashboardFragment extends Fragment {
                 if(purOrderList.size()<1){
                     TextView child = new TextView(getContext());
                     child.setTextSize(20);
-                    child.setWidth(1000);
-                    child.setPadding(10,20,0,0);
+                    child.setPadding(200,20,0,0);
                     child.setTextAlignment(View.TEXT_ALIGNMENT_CENTER);
                     child.setText("没有查询到相关进货单！");
                     tableBody.addView(child);

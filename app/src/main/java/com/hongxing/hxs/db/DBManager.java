@@ -3,14 +3,12 @@ package com.hongxing.hxs.db;
 import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
 import android.util.Log;
+import android.widget.Toast;
 
 import com.hongxing.hxs.MainActivity;
-import com.hongxing.hxs.utils.ZIPUtils;
+import com.hongxing.hxs.utils.zip.ZIPUtils;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -97,7 +95,8 @@ public class DBManager {
     public static boolean exportDBFileToDir(String dir){
         try {
         String zipFilePath=dir+File.separator
-                +new SimpleDateFormat("yyyy-MM-dd_HH.mm.ss备份", Locale.CHINA).format(new Date())
+                +"鸿兴系统"
+                +new SimpleDateFormat("yyyy-MM-dd.HH.mm.ss备份", Locale.CHINA).format(new Date())
                 +".zip";
             ZIPUtils.compress(MainActivity.APPStoragePath,zipFilePath);
             return true;

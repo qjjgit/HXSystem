@@ -11,7 +11,6 @@
         android:layout_height="wrap_content"
         android:layout_marginStart="8dp"
         android:layout_marginTop="16dp"
-        android:lines="3"
         android:layout_marginEnd="8dp"
         android:textAlignment="center"
         android:textSize="20sp"
