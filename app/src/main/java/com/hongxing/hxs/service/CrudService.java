@@ -10,6 +10,7 @@ import com.hongxing.hxs.entity.PurchaseOrder;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Arrays;
 
 public class CrudService {
 //    private DatabaseHelper databaseHelper;
@@ -87,7 +88,6 @@ public class CrudService {
         String sql = "update goodsdata set name=?,barcode=? ,unit=?,price=?,orig=? where id=?";
         db.execSQL(sql,new Object[]{
                 goods.getName(),goods.getBarcode(),goods.getUnit(),goods.getPrice(),goods.getOrig(),goods.getId()});
-        db.close();
     }
 
     public boolean existGoodsByNameAndUnit(String name,String unit){
@@ -211,6 +211,20 @@ public class CrudService {
             list.add(new PurchaseOrder(id,supplier,date,uri));
         }
         return list;
+    }
+
+    //更新 最后备份时间
+    public void setLastBackup(String date){
+        String sql="update system set last_backup=\""+date+"\"";
+        db.execSQL(sql);
+    }
+
+    // 最后备份时间
+    public String getLastBackup(){
+        String sql="select last_backup from system";
+        Cursor cursor = db.rawQuery(sql, null);
+        cursor.moveToNext();
+        return cursor.getString(cursor.getColumnIndex("last_backup"));
     }
 
     //统计商品数据条数

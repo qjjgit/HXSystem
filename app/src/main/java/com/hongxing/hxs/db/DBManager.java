@@ -3,9 +3,9 @@ package com.hongxing.hxs.db;
 import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
 import android.util.Log;
-import android.widget.Toast;
 
 import com.hongxing.hxs.MainActivity;
+import com.hongxing.hxs.service.CrudService;
 import com.hongxing.hxs.utils.zip.ZIPUtils;
 
 import java.io.File;
@@ -92,12 +92,10 @@ public class DBManager {
         }
     }
 
-    public static boolean exportDBFileToDir(String dir){
+    public static boolean exportDBFileToDir(String pathPrefix){
         try {
-        String zipFilePath=dir+File.separator
-                +"鸿兴系统"
-                +new SimpleDateFormat("yyyy-MM-dd.HH.mm.ss备份", Locale.CHINA).format(new Date())
-                +".zip";
+//            String date = new SimpleDateFormat("yyyy-MM-dd.HH.mm.ss", Locale.CHINA).format(new Date());
+            String zipFilePath=pathPrefix+"备份.zip";
             ZIPUtils.compress(MainActivity.APPStoragePath,zipFilePath);
             return true;
         }catch (Exception e){

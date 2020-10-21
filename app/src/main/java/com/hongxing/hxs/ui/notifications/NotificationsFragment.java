@@ -29,11 +29,15 @@ import androidx.lifecycle.ViewModelProviders;
 import com.hongxing.hxs.MainActivity;
 import com.hongxing.hxs.R;
 import com.hongxing.hxs.db.DBManager;
+import com.hongxing.hxs.service.CrudService;
 import com.hongxing.hxs.utils.zip.ZIPUtils;
 import com.hongxing.hxs.utils.zip.ZipListener;
 
 import java.io.File;
-import java.util.Random;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
 
 import static android.app.Activity.RESULT_OK;
 
@@ -41,6 +45,7 @@ import static android.app.Activity.RESULT_OK;
 public class NotificationsFragment extends Fragment {
 
     private NotificationsViewModel notificationsViewModel;
+    private TextView lastBackup;
     private Handler handler;
 
     public View onCreateView(@NonNull LayoutInflater inflater,
@@ -49,11 +54,13 @@ public class NotificationsFragment extends Fragment {
                 ViewModelProviders.of(this).get(NotificationsViewModel.class);
         View root = inflater.inflate(R.layout.fragment_notifications, container, false);
         setClick(root);
-        final TextView textView = root.findViewById(R.id.text_notifications);
+        lastBackup = root.findViewById(R.id.text_lastBackup);
         notificationsViewModel.getText().observe(this, new Observer<String>() {
             @Override
             public void onChanged(@Nullable String s) {
-                    textView.setText("系统设置");
+                CrudService service = new CrudService(getContext());
+                String date = service.getLastBackup();service.close();
+                lastBackup.append(date);
             }
         });
         return root;
@@ -66,10 +73,29 @@ public class NotificationsFragment extends Fragment {
         view.findViewById(R.id.btn_exportData).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd.HH.mm.ss", Locale.CHINA);
+                try {
+                    long last = format.parse(lastBackup.getText().toString().replace("上一次备份：","")).getTime();
+                    int minute = (int)(new Date().getTime() - last) / 60000;
+                    if (minute<3){
+                        Toast.makeText(context,"您刚刚进行过备份，请勿频繁操作！",Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                } catch (ParseException e) {
+                    e.printStackTrace();
+                }
                 File file = new File(strdir);
                 if (!file.exists()) file.mkdir();
-                boolean success = DBManager.exportDBFileToDir(strdir);
-                String msg = success ? "已备份到" + strdir : "备份失败！";
+                String date = format.format(new Date());
+                boolean success = DBManager.exportDBFileToDir(strdir+File.separator+"鸿兴系统"+date);
+                String msg="备份失败！";
+                if (success){
+                    CrudService service = new CrudService(context);
+                    service.setLastBackup(date);
+                    service.close();
+                    lastBackup.setText(("上一次备份："+date));
+                    msg="已备份到" + strdir;
+                }
                 Toast.makeText(context, msg, Toast.LENGTH_LONG).show();
             }
         });
@@ -113,7 +139,7 @@ public class NotificationsFragment extends Fragment {
             alterDialog.setCancelable(false);
             alterDialog.setIcon(R.drawable.data_ico32);//图标
             alterDialog.setTitle("选择的数据包");//文字
-            alterDialog.setMessage("   "+fileName);//提示消息
+            alterDialog.setMessage(" "+fileName);//提示消息
             //积极的选择
             alterDialog.setPositiveButton("取消", new DialogInterface.OnClickListener() {
                 @Override
