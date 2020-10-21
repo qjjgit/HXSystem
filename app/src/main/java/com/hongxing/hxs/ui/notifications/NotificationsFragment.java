@@ -73,7 +73,7 @@ public class NotificationsFragment extends Fragment {
         view.findViewById(R.id.btn_exportData).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd.HH.mm.ss", Locale.CHINA);
+                SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd.HH.mm", Locale.CHINA);
                 try {
                     long last = format.parse(lastBackup.getText().toString().replace("上一次备份：","")).getTime();
                     int minute = (int)(new Date().getTime() - last) / 60000;
