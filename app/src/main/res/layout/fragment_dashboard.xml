@@ -2,12 +2,12 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    android:layout_width="fill_parent"
+    android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
     >
     <androidx.constraintlayout.widget.ConstraintLayout
-    android:layout_width="fill_parent"
+    android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="horizontal">
         <EditText
@@ -80,19 +80,19 @@
         android:layout_height="match_parent"
         android:fillViewport="true"
         android:scrollbars="none">
-        <HorizontalScrollView
-            android:id="@+id/scroll_view"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:scrollbarAlwaysDrawHorizontalTrack="false"
-            android:scrollbars="none">
+<!--        <HorizontalScrollView-->
+<!--            android:id="@+id/scroll_view"-->
+<!--            android:layout_width="match_parent"-->
+<!--            android:layout_height="wrap_content"-->
+<!--            android:scrollbarAlwaysDrawHorizontalTrack="false"-->
+<!--            android:scrollbars="none">-->
             <LinearLayout
                 android:id="@+id/MyTable"
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="5dp"
                 android:orientation="vertical">
             </LinearLayout>
-        </HorizontalScrollView>
+<!--        </HorizontalScrollView>-->
     </ScrollView>
 </LinearLayout>

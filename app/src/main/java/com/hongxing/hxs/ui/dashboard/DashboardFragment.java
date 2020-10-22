@@ -56,7 +56,6 @@ public class DashboardFragment extends Fragment {
     private short nowListPage=0x00;//0为商品信息列表，1为进货单列表
     private LinearLayout tableHeader;
     private LinearLayout tableBody;
-    private RelativeLayout relativeLayout;
     private String[] tableHeaderTexts={"序号","商品名称","单位","售价","进货价"};
     private ArrayList<ArrayList<MyTableTextView>> tableBodyList=new ArrayList<>();
     private ArrayList<Goods> goodsList;
@@ -150,7 +149,7 @@ public class DashboardFragment extends Fragment {
     }
 
     private void initTableHeader(){
-        relativeLayout=(RelativeLayout)LayoutInflater.from(this.getContext()).inflate(R.layout.table,null);
+        LinearLayout relativeLayout=(LinearLayout) LayoutInflater.from(this.getContext()).inflate(R.layout.table,null);
         MyTableTextView title=relativeLayout.findViewById(R.id.list_1_1);
         title.setText(tableHeaderTexts[0]);
         title.setTextColor(Color.BLUE);
@@ -209,14 +208,17 @@ public class DashboardFragment extends Fragment {
                 if(goodsList.size()<1){
                     TextView child = new TextView(getContext());
                     child.setTextSize(20);
-                    child.setPadding(200,20,0,0);
+                    child.setPadding(170,20,0,0);
                     child.setTextAlignment(View.TEXT_ALIGNMENT_CENTER);
                     child.setText("没有查询到相关商品！");
                     tableBody.addView(child);
                     return;
                 }
+//                DisplayMetrics metrics = new DisplayMetrics();
+//                getActivity().getWindowManager().getDefaultDisplay().getMetrics(metrics);
+//                System.out.println("总width: "+tableHeader.getWidth());
                 for(int i=0;i<goodsList.size();i++){
-                    relativeLayout=(RelativeLayout) LayoutInflater.from(context).inflate(R.layout.table,null);
+                    LinearLayout relativeLayout=(LinearLayout) LayoutInflater.from(context).inflate(R.layout.table,null);
                     int color = Color.parseColor("#ffffff");
                     if (i%2!=0) color= Color.parseColor("#eeeeee");
                     Goods goods = goodsList.get(i);
@@ -253,7 +255,7 @@ public class DashboardFragment extends Fragment {
                 if(purOrderList.size()<1){
                     TextView child = new TextView(getContext());
                     child.setTextSize(20);
-                    child.setPadding(200,20,0,0);
+                    child.setPadding(170,20,0,0);
                     child.setTextAlignment(View.TEXT_ALIGNMENT_CENTER);
                     child.setText("没有查询到相关进货单！");
                     tableBody.addView(child);
