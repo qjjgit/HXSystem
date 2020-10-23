@@ -10,6 +10,12 @@ public class PurchaseOrder {
     public PurchaseOrder() {
     }
 
+    public PurchaseOrder(String id, String supplier, String date) {
+        this.id = id;
+        this.supplier = supplier;
+        this.date = date;
+    }
+
     public PurchaseOrder(String id, String supplier, String date, String data_uri) {
         this.id = id;
         this.supplier = supplier;

@@ -53,16 +53,15 @@
             android:layout_width="0dp"
             android:layout_weight="1."
             android:layout_height="wrap_content"
-            android:background="#ddd"
-            android:gravity="center"
             android:layout_marginTop="5dp"
             android:layout_marginStart="3dp"
             android:layout_marginEnd="3dp">
             <TextView
                 android:id="@+id/btn_jumpPage"
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="转到进货单"
+                android:background="#ddd"
                 android:paddingStart="2dp"
                 android:paddingEnd="2dp"
                 android:paddingTop="7dp"

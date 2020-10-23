@@ -2,6 +2,7 @@ package com.hongxing.hxs.ui.dashboard;
 
 import android.annotation.SuppressLint;
 import android.app.AlertDialog;
+import android.app.DatePickerDialog;
 import android.app.Dialog;
 import android.app.ProgressDialog;
 import android.content.Context;
@@ -9,6 +10,7 @@ import android.content.DialogInterface;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -23,6 +25,7 @@ import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
+import android.widget.DatePicker;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -33,6 +36,7 @@ import android.widget.Toast;
 
 import androidx.annotation.Nullable;
 import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProviders;
@@ -50,6 +54,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Locale;
 
@@ -281,7 +286,7 @@ public class DashboardFragment extends Fragment {
                     });
                     tableBody.addView(relativeLayout);
                 }
-                uiHandler.sendEmptyMessage(0x08);
+                uiHandler.sendEmptyMessageDelayed(0x08,50);
                 break;
             }
             case 0x01:{
@@ -301,8 +306,8 @@ public class DashboardFragment extends Fragment {
                     final LinearLayout row=(LinearLayout) LayoutInflater.from(context).inflate(R.layout.list_item,null);
 //                    if (i%2!=0) row.setBackgroundResource(R.drawable.list_item_bg2);
                     final PurchaseOrder purchaseOrder = purOrderList.get(i);
-                    Bitmap bitmap = BitmapFactory.decodeFile(purchaseOrder.getDataUri());
-                    bitmap=MainActivity.centerSquareScaleBitmap(bitmap,100,scale);
+                    Bitmap temp = BitmapFactory.decodeFile(purchaseOrder.getDataUri());
+                    final Bitmap bitmap=MainActivity.centerSquareScaleBitmap(temp,100,scale);
                     ((ImageView)row.findViewById(R.id.pur_img_item)).setImageBitmap(bitmap);
                     ((TextView)row.findViewById(R.id.pur_supplier_item)).setText(purchaseOrder.getSupplier());
                     ((TextView)row.findViewById(R.id.pur_date_item)).setText(purchaseOrder.getDate());
@@ -312,12 +317,13 @@ public class DashboardFragment extends Fragment {
                             showPurOrderInfoPage(purchaseOrder);
                         }
                     });
-//                    final int rowIndex=i;
+                    final int rowIndex=i;
                     row.findViewById(R.id.pur_btn_item).setOnClickListener(new View.OnClickListener() {
                         @Override
                         public void onClick(View view) {
-                            final String[] items = { "   添加/删除相关联的商品","   删除当前进货单"
-                               ,"                                                   返回"};
+                            final String[] items = { "   添加/删除相关联的商品",
+                                        "   修改当前进货单信息","   删除当前进货单",
+                                        "                                                   返回"};
                             AlertDialog.Builder listDialog = new AlertDialog.Builder(context);
                             listDialog.setIcon(R.drawable.operating);
                             listDialog.setTitle("请选择");
@@ -326,11 +332,13 @@ public class DashboardFragment extends Fragment {
                                 @Override
                                 public void onClick(DialogInterface dialog, int which) {
                                     switch (which){
+                                        /*增添进货单关联*/
                                         case 0:{
                                             AlertDialog.Builder builder= new AlertDialog.Builder(context);
                                             final Dialog dialogChoose= builder.create();
                                             dialogChoose.show();
                                             final View root= LayoutInflater.from(context).inflate(R.layout.fragment_dashboard, null);
+                                            ((EditText)root.findViewById(R.id.text_search)).setWidth((int)(root.getWidth()*.15));
                                             root.findViewById(R.id.btn_add).setAlpha(0f);
                                             root.findViewById(R.id.btn_add).setEnabled(false);
                                             root.findViewById(R.id.btn_jumpPage).setAlpha(0f);
@@ -363,8 +371,61 @@ public class DashboardFragment extends Fragment {
                                             });
                                             break;
                                         }
-                                        /*删除进货单*/
+                                        /*修改进货单信息*/
                                         case 1:{
+                                            AlertDialog.Builder builder= new AlertDialog.Builder(context);
+                                            final Dialog dialogInput= builder.create();
+                                            dialogInput.show();
+                                            dialogInput.setCancelable(false);
+                                            final View root= LayoutInflater.from(context).inflate(R.layout.suretoadd_purorder_page, null);
+                                            ((TextView)root.findViewById(R.id.addPurOrder_title)).setText("修改进货单");
+                                            ((ImageView)root.findViewById(R.id.img_addingPurOrder)).setImageBitmap(bitmap);
+                                            final String supplier = purchaseOrder.getSupplier();
+                                            ((EditText)root.findViewById(R.id.addPurOrder_supplier)).setText(supplier);
+                                            final String date = purchaseOrder.getDate();
+                                            ((Button)root.findViewById(R.id.addPurOrder_date)).setText(date);
+                                            Window dialogWindow = dialogInput.getWindow();
+                                            dialogWindow.setContentView(root);
+                                            dialogWindow.clearFlags(WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM);
+                                            (root.findViewById(R.id.addPurOrder_cancel)).setOnClickListener(new View.OnClickListener() {
+                                                @Override
+                                                public void onClick(View view) {
+                                                    dialogInput.dismiss();
+                                                }
+                                            });
+                                            final Button et_date= root.findViewById(R.id.addPurOrder_date);
+                                            et_date.setOnClickListener(new View.OnClickListener() {
+                                                @RequiresApi(api = Build.VERSION_CODES.N)
+                                                @Override
+                                                public void onClick(View view) {
+                                                    DatePickerDialog datePickerDialog = new DatePickerDialog(context, DatePickerDialog.THEME_HOLO_LIGHT);
+                                                    DatePicker picker = datePickerDialog.getDatePicker();
+                                                    picker.setMaxDate(new Date().getTime());
+                                                    datePickerDialog.setOnDateSetListener(new DatePickerDialog.OnDateSetListener() {
+                                                        @Override
+                                                        public void onDateSet(DatePicker datePicker, int year, int month, int day) {
+                                                            et_date.setText(year +"-"+(month+1)+"-"+day);
+                                                        }
+                                                    });
+                                                    datePickerDialog.show();
+                                                }
+                                            });
+                                            final EditText et_supplier= root.findViewById(R.id.addPurOrder_supplier);
+                                            (root.findViewById(R.id.addPurOrder_ok)).setOnClickListener(new View.OnClickListener() {
+                                                @Override
+                                                public void onClick(View view) {
+                                                    String update_date = et_date.getText().toString();
+                                                    String update_supplier =et_supplier.getText().toString().replaceAll(" ","");
+                                                    if (update_supplier.length()<1)update_supplier="未填写";
+                                                    if (!supplier.equals(update_supplier)||!date.equals(update_date))
+                                                    modifyPurOrderInfo(new PurchaseOrder(purchaseOrder.getId(),update_supplier,update_date),rowIndex);
+                                                    dialogInput.dismiss();
+                                                }
+                                            });
+                                            break;
+                                        }
+                                        /*删除进货单*/
+                                        case 2:{
                                             final AlertDialog.Builder alterDiaglog = new AlertDialog.Builder(context);
                                             alterDiaglog.setIcon(R.drawable.error);//图标
                                             alterDiaglog.setTitle("系统提示");//文字
@@ -391,7 +452,7 @@ public class DashboardFragment extends Fragment {
                                             break;
                                         }
                                         /*返回*/
-                                        case 2:{}
+                                        case 3:{}
                                     }
                                 }
                             });
@@ -400,7 +461,7 @@ public class DashboardFragment extends Fragment {
                     });
                     tableBody.addView(row);
                 }
-                uiHandler.sendEmptyMessage(0x08);
+                uiHandler.sendEmptyMessageDelayed(0x08,50);
                 break;
             }
         }
@@ -629,6 +690,17 @@ public class DashboardFragment extends Fragment {
         header.addView(button);
     }
 
+    private void modifyPurOrderInfo(PurchaseOrder purO,int rowIndex){
+        Context context = getContext();
+        CrudService service = new CrudService(context);
+        service.updatePurOrder(purO);service.close();
+        purOrderList.set(rowIndex,purO);
+        ((TextView)tableBody.getChildAt(rowIndex).findViewById(R.id.pur_supplier_item)).setText(purO.getSupplier());
+        ((TextView)tableBody.getChildAt(rowIndex).findViewById(R.id.pur_date_item)).setText(purO.getDate());
+        Toast.makeText(context,"更新成功！",Toast.LENGTH_SHORT).show();
+        loadData();// TODO: 2020/10/23 看看卡不卡
+    }
+
     synchronized private void showGoodsInfoPage(final int rowNumber){
         AlertDialog.Builder builder= new AlertDialog.Builder(getContext());
         final Dialog dialog= builder.create();
@@ -713,7 +785,7 @@ public class DashboardFragment extends Fragment {
         });
     }
 
-    private void showPurOrderInfoPage(PurchaseOrder purchaseOrder){
+    synchronized private void showPurOrderInfoPage(PurchaseOrder purchaseOrder){
         Context context = getContext();
         AlertDialog.Builder builder= new AlertDialog.Builder(context,R.style.Dialog_Fullscreen);
         final Dialog dialog= builder.create();

@@ -90,6 +90,12 @@ public class CrudService {
                 goods.getName(),goods.getBarcode(),goods.getUnit(),goods.getPrice(),goods.getOrig(),goods.getId()});
     }
 
+    public void updatePurOrder(PurchaseOrder pur){
+        String sql="update pur_order set supplier=\""+pur.getSupplier()+"\","
+                    +"date=\""+pur.getDate()+"\" where id=\""+pur.getId()+"\"";
+        db.execSQL(sql);
+    }
+
     public boolean existGoodsByNameAndUnit(String name,String unit){
         boolean exist=false;
 //        byte[] bytes = name.getBytes();

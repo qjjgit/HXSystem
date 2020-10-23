@@ -154,7 +154,7 @@ public class MainActivity extends AppCompatActivity {
         if (requestCode == REQUEST_CODE_SHOOT){
             View view= LayoutInflater.from(this).inflate(R.layout.suretoadd_purorder_page, null);
             final Bitmap bitmap_orig = BitmapFactory.decodeFile(showPIC.getPath());
-            final Bitmap bitmap_comp=centerSquareScaleBitmap(bitmap_orig, 100,getResources().getDisplayMetrics().density);
+            final Bitmap bitmap_comp=centerSquareScaleBitmap(bitmap_orig, 200,getResources().getDisplayMetrics().density);
             ImageView imgView=view.findViewById(R.id.img_addingPurOrder);
             imgView.setImageBitmap(bitmap_comp);
             AlertDialog.Builder builder= new AlertDialog.Builder(this);
@@ -194,10 +194,6 @@ public class MainActivity extends AppCompatActivity {
                         Toast.makeText(getApplicationContext(),"请先填入进货单的日期！",Toast.LENGTH_SHORT).show();
                         return;
                     }
-//                    if (){
-//                        Toast.makeText(getApplicationContext(),"请填入正确的年月日！",Toast.LENGTH_SHORT).show();
-//                        return;
-//                    }
                     String supplier =addPurOrder_supplier.getText().toString().replaceAll(" ","");
                     if (supplier.length()<1)supplier="未填写";
                     sureToAdd_purOrder(bitmap_comp,strDate,supplier);
