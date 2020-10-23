@@ -1,5 +1,6 @@
 package com.hongxing.hxs.ui.dashboard;
 
+import android.annotation.SuppressLint;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.app.ProgressDialog;
@@ -10,6 +11,7 @@ import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.Message;
 import android.util.DisplayMetrics;
 import android.view.Gravity;
 import android.view.LayoutInflater;
@@ -61,7 +63,7 @@ public class DashboardFragment extends Fragment {
     private ArrayList<Goods> goodsList;
     private ArrayList<PurchaseOrder> purOrderList;
     private DashboardViewModel dashboardViewModel;
-    final Handler uiHandler=new Handler();
+    private Handler uiHandler;
     private String nowSearchWord;
     private String[] lastSort=null;
 
@@ -91,10 +93,10 @@ public class DashboardFragment extends Fragment {
             btn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                String str1=" 切换到\n 进货单 ";
+                String str1="转到进货单";
                 String str2="输入名称或条码";
                 if (nowListPage==0x00){
-                    nowListPage=0x01;str1="  切换到\n商品列表";str2="输入供货商名称";
+                    nowListPage=0x01;str1="转到商品列表";str2="输入供货商名称";
                 }
                 else nowListPage=0x00;
                 searchTextV.setHint(str2);
@@ -115,37 +117,68 @@ public class DashboardFragment extends Fragment {
         });
         return root;
     }
+    @SuppressLint("HandlerLeak")
     private void AsynchronousLoading(){
         final ProgressDialog progressDialog = new ProgressDialog(getContext());
-        progressDialog.setProgress(0);
         progressDialog.setMessage("加载中...");
         progressDialog.setIndeterminate(true);
         progressDialog.setCancelable(false);
-        progressDialog.setMax(10);
         progressDialog.show();
-        final Thread t = new Thread() {
-            public void run(){
-                boolean post = uiHandler.post(new Runnable() {
-                    @Override
-                    public void run() {
+        uiHandler=new Handler(){
+            @Override
+            public void handleMessage(@NonNull Message msg) {
+                super.handleMessage(msg);
+                switch (msg.what){
+                    case 0x03:{
                         if (nowListPage==0x00)
                         initTableHeader();
-                        queryData();
                         loadData();
+                        break;
                     }
-                });
-                if (post){
-                    try {
-                        sleep(500);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
+                    case 0x08:{
+                        if (progressDialog.isShowing()) {
+                            progressDialog.cancel();
+                        }break;
                     }
-                    progressDialog.setProgress(10);
-                    progressDialog.cancel();
                 }
             }
         };
-        t.start();
+        new Thread(){
+            @Override
+            public void run() {
+                queryData();
+                // TODO: 2020/10/22 可以在线程里分多次查询数据，分多次追加数据进tableBody,避免一个时间内加载大量视图
+//                try {
+//                    sleep(500);
+//                } catch (InterruptedException e) {
+//                    e.printStackTrace();
+//                }
+                uiHandler.sendEmptyMessageDelayed(0x03,50);
+            }
+        }.start();
+//        final Thread t = new Thread() {
+//            public void run(){
+//                boolean post = uiHandler.post(new Runnable() {
+//                    @Override
+//                    public void run() {
+//                        if (nowListPage==0x00)
+//                        initTableHeader();
+//                        queryData();
+//                        loadData();
+//                    }
+//                });
+//                if (post){
+//                    try {
+//                        sleep(500);
+//                    } catch (InterruptedException e) {
+//                        e.printStackTrace();
+//                    }
+//                    progressDialog.setProgress(10);
+//                    progressDialog.cancel();
+//                }
+//            }
+//        };
+//        t.start();
     }
 
     private void initTableHeader(){
@@ -176,12 +209,12 @@ public class DashboardFragment extends Fragment {
 
     private void queryData(){
         final CrudService service = new CrudService(getContext());
-        switch (nowListPage){
-            case 0x00:{
-                goodsList = service.findByPage(0, 999,nowSearchWord);
-            }
-            case 0x01:{
-                purOrderList=service.findPurOrderByWord(nowSearchWord);
+        if (nowListPage==0x00){
+            goodsList = service.findByPage(0, 999,nowSearchWord);
+        }
+        if (nowListPage==0x01){
+            purOrderList=service.findPurOrderByWord(nowSearchWord);
+            if (purOrderList.size()>1){
                 final SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
                 Collections.sort(purOrderList, new Comparator<PurchaseOrder>() {
                     @Override
@@ -208,15 +241,14 @@ public class DashboardFragment extends Fragment {
                 if(goodsList.size()<1){
                     TextView child = new TextView(getContext());
                     child.setTextSize(20);
-                    child.setPadding(170,20,0,0);
+                    child.setWidth(tableHeader.getWidth());
+                    child.setPadding(0,20,0,0);
                     child.setTextAlignment(View.TEXT_ALIGNMENT_CENTER);
                     child.setText("没有查询到相关商品！");
                     tableBody.addView(child);
+                    uiHandler.sendEmptyMessage(0x08);
                     return;
                 }
-//                DisplayMetrics metrics = new DisplayMetrics();
-//                getActivity().getWindowManager().getDefaultDisplay().getMetrics(metrics);
-//                System.out.println("总width: "+tableHeader.getWidth());
                 for(int i=0;i<goodsList.size();i++){
                     LinearLayout relativeLayout=(LinearLayout) LayoutInflater.from(context).inflate(R.layout.table,null);
                     int color = Color.parseColor("#ffffff");
@@ -249,22 +281,25 @@ public class DashboardFragment extends Fragment {
                     });
                     tableBody.addView(relativeLayout);
                 }
+                uiHandler.sendEmptyMessage(0x08);
                 break;
             }
             case 0x01:{
                 if(purOrderList.size()<1){
                     TextView child = new TextView(getContext());
                     child.setTextSize(20);
-                    child.setPadding(170,20,0,0);
+                    child.setWidth(tableHeader.getWidth());
+                    child.setPadding(0,20,0,0);
                     child.setTextAlignment(View.TEXT_ALIGNMENT_CENTER);
                     child.setText("没有查询到相关进货单！");
                     tableBody.addView(child);
+                    uiHandler.sendEmptyMessage(0x08);
                     return;
                 }
                 final float scale = context.getResources().getDisplayMetrics().density;
                 for(int i=0;i<purOrderList.size();i++){
                     final LinearLayout row=(LinearLayout) LayoutInflater.from(context).inflate(R.layout.list_item,null);
-                    if (i%2!=0) row.setBackgroundColor(Color.parseColor("#555555"));
+//                    if (i%2!=0) row.setBackgroundResource(R.drawable.list_item_bg2);
                     final PurchaseOrder purchaseOrder = purOrderList.get(i);
                     Bitmap bitmap = BitmapFactory.decodeFile(purchaseOrder.getDataUri());
                     bitmap=MainActivity.centerSquareScaleBitmap(bitmap,100,scale);
@@ -365,8 +400,9 @@ public class DashboardFragment extends Fragment {
                     });
                     tableBody.addView(row);
                 }
+                uiHandler.sendEmptyMessage(0x08);
+                break;
             }
-            break;
         }
     }
 

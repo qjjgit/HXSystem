@@ -6,67 +6,73 @@
     android:layout_height="match_parent"
     android:orientation="vertical"
     >
-    <androidx.constraintlayout.widget.ConstraintLayout
+    <LinearLayout
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:gravity="center_horizontal"
     android:orientation="horizontal">
         <EditText
             android:id="@+id/text_search"
-            android:layout_width="wrap_content"
+            android:layout_weight="1.55"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:maxLength="15"
             android:inputType="text"
-            android:hint="输入名称或条码"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
-
+            android:hint="输入名称或条码"/>
         <TextView
             android:id="@+id/btn_search"
-            android:layout_width="wrap_content"
+            android:layout_weight=".5"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:text="查找"
-            android:padding="7dp"
+            android:textAlignment="center"
+            android:paddingTop="5dp"
+            android:paddingBottom="5dp"
+            android:paddingStart="2dp"
+            android:paddingEnd="2dp"
             android:background="#ddd"
             android:textColor="#333"
-            android:textSize="18sp"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintStart_toEndOf="@+id/text_search"
-            app:layout_constraintTop_toTopOf="@+id/text_search" />
-
+            android:textSize="18sp"/>
         <TextView
             android:id="@+id/btn_add"
-            android:layout_width="wrap_content"
+            android:layout_weight=".9"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginStart="5dp"
+            android:layout_marginStart="3dp"
             android:onClick="addGoodsClick"
             android:text="添加商品"
-            android:padding="7dp"
+            android:textAlignment="center"
+            android:paddingTop="5dp"
+            android:paddingBottom="5dp"
+            android:paddingStart="2dp"
+            android:paddingEnd="2dp"
             android:background="#ddd"
             android:textColor="#333"
-            android:textSize="18sp"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintStart_toEndOf="@+id/btn_search"
-            app:layout_constraintTop_toTopOf="parent" />
-
-        <TextView
-            android:id="@+id/btn_jumpPage"
-            android:layout_width="wrap_content"
+            android:textSize="18sp"/>
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_weight="1."
             android:layout_height="wrap_content"
-            android:layout_marginStart="5dp"
-            android:text=" 切换到\n 进货单 "
-            android:paddingStart="7dp"
-            android:paddingEnd="7dp"
-            android:paddingTop="0dp"
-            android:paddingBottom="2dp"
             android:background="#ddd"
-            android:textColor="#333"
-            android:textSize="14sp"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintStart_toEndOf="@+id/btn_add"
-            app:layout_constraintTop_toTopOf="parent" />
+            android:gravity="center"
+            android:layout_marginTop="5dp"
+            android:layout_marginStart="3dp"
+            android:layout_marginEnd="3dp">
+            <TextView
+                android:id="@+id/btn_jumpPage"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="转到进货单"
+                android:paddingStart="2dp"
+                android:paddingEnd="2dp"
+                android:paddingTop="7dp"
+                android:paddingBottom="8dp"
+                android:textColor="#333"
+                android:textAlignment="center"
+                android:textSize="14sp"/>
+        </LinearLayout>
 
-    </androidx.constraintlayout.widget.ConstraintLayout>
-
+    </LinearLayout>
 
 <!--    固定表头位置-->
     <LinearLayout

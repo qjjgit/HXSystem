@@ -3,12 +3,12 @@
     <!-- This is the line -->
     <item  android:left = "0dp"  android:right = "0dp" >
         <shape>
-            <solid  android:color = "#555" />
+            <solid  android:color = "#fff" />
         </shape>
     </item>
     <item  android:bottom = "1dp" >
         <shape >
-            <solid  android:color = "#fff"  />
+            <solid  android:color = "#555"  />
         </shape >
     </item>
 </layer-list>

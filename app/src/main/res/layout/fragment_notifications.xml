@@ -13,7 +13,7 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:paddingBottom="10dp"
-        android:background="@drawable/edit_background">
+        android:background="@drawable/black_bottom_border">
         <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
@@ -62,7 +62,7 @@
         android:orientation="horizontal"
         android:paddingTop="10dp"
         android:paddingBottom="10dp"
-        android:background="@drawable/edit_background">
+        android:background="@drawable/black_bottom_border">
         <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="0dp"
             android:layout_height="match_parent"
