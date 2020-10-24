@@ -202,7 +202,6 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
             android:text="查看\n进货单"
-            android:onClick="showPurchaseOrderPage"
             android:textAlignment="center"
             android:textColor="@color/colorAccent"
             android:textSize="18sp"

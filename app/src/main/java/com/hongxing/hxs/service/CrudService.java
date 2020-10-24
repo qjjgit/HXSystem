@@ -247,4 +247,18 @@ public class CrudService {
         int count = cursor.getCount();
         return count;
     }
+
+    public boolean unlinkPurOrder(Goods goods, PurchaseOrder pur) {
+        db.beginTransaction();
+        try {
+            String sql="delete from goods_pur_o where pur_id=\""+pur.getId()+"\" and goods_id=?";
+            db.execSQL(sql,new Object[]{goods.getId()});
+            db.setTransactionSuccessful();
+            return true;
+        }catch (Exception e){
+            return false;
+        }finally {
+            db.endTransaction();
+        }
+    }
 }

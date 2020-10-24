@@ -16,6 +16,7 @@ import android.os.Handler;
 import android.os.Message;
 import android.util.DisplayMetrics;
 import android.view.Gravity;
+import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -30,6 +31,7 @@ import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
+import android.widget.SimpleAdapter;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -45,9 +47,11 @@ import com.hongxing.hxs.MainActivity;
 import com.hongxing.hxs.R;
 import com.hongxing.hxs.entity.Goods;
 import com.hongxing.hxs.entity.PurchaseOrder;
+import com.hongxing.hxs.other.MyViewBinder;
 import com.hongxing.hxs.service.CrudService;
 import com.hongxing.hxs.utils.GoodsUtils;
 
+import java.io.File;
 import java.text.Collator;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -57,6 +61,7 @@ import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Locale;
+import java.util.Map;
 
 public class DashboardFragment extends Fragment {
 
@@ -67,8 +72,11 @@ public class DashboardFragment extends Fragment {
     private ArrayList<ArrayList<MyTableTextView>> tableBodyList=new ArrayList<>();
     private ArrayList<Goods> goodsList;
     private ArrayList<PurchaseOrder> purOrderList;
+    private LinearLayout purListView;
+    private ArrayList<Bitmap> compImgs=new ArrayList<>();
     private DashboardViewModel dashboardViewModel;
-    private Handler uiHandler;
+    private Handler uiHandler=null;
+    private ProgressDialog progressDialog;
     private String nowSearchWord;
     private String[] lastSort=null;
 
@@ -124,15 +132,19 @@ public class DashboardFragment extends Fragment {
     }
     @SuppressLint("HandlerLeak")
     private void AsynchronousLoading(){
-        final ProgressDialog progressDialog = new ProgressDialog(getContext());
-        progressDialog.setMessage("加载中...");
-        progressDialog.setIndeterminate(true);
-        progressDialog.setCancelable(false);
-        progressDialog.show();
+        if (progressDialog==null) {
+            progressDialog = new ProgressDialog(getContext());
+            progressDialog.setMessage("加载中...");
+            progressDialog.setIndeterminate(true);
+            progressDialog.setCancelable(false);
+            progressDialog.show();
+        }
+        if (uiHandler==null)
         uiHandler=new Handler(){
             @Override
             public void handleMessage(@NonNull Message msg) {
                 super.handleMessage(msg);
+                LinearLayout table = (LinearLayout) msg.obj;
                 switch (msg.what){
                     case 0x03:{
                         if (nowListPage==0x00)
@@ -140,9 +152,18 @@ public class DashboardFragment extends Fragment {
                         loadData();
                         break;
                     }
+                    case 0x07:{
+                        Bundle data = msg.getData();
+                        int index = data.getInt("index");
+//                        byte[] imgData = data.getByteArray("imgData");
+//                        Bitmap bitmap = BitmapFactory.decodeByteArray(imgData, 0, imgData.length);
+                        Bitmap bitmap = compImgs.get(index);
+                        ((ImageView)table.getChildAt(index).findViewById(R.id.pur_img_item)).setImageBitmap(bitmap);
+                        break;
+                    }
                     case 0x08:{
                         if (progressDialog.isShowing()) {
-                            progressDialog.cancel();
+                            progressDialog.dismiss();
                         }break;
                     }
                 }
@@ -152,12 +173,6 @@ public class DashboardFragment extends Fragment {
             @Override
             public void run() {
                 queryData();
-                // TODO: 2020/10/22 可以在线程里分多次查询数据，分多次追加数据进tableBody,避免一个时间内加载大量视图
-//                try {
-//                    sleep(500);
-//                } catch (InterruptedException e) {
-//                    e.printStackTrace();
-//                }
                 uiHandler.sendEmptyMessageDelayed(0x03,50);
             }
         }.start();
@@ -186,6 +201,7 @@ public class DashboardFragment extends Fragment {
 //        t.start();
     }
 
+    //加载表头
     private void initTableHeader(){
         LinearLayout relativeLayout=(LinearLayout) LayoutInflater.from(this.getContext()).inflate(R.layout.table,null);
         MyTableTextView title=relativeLayout.findViewById(R.id.list_1_1);
@@ -212,6 +228,7 @@ public class DashboardFragment extends Fragment {
         tableHeader.addView(relativeLayout);
     }
 
+    //查询商品or进货单数据
     private void queryData(){
         final CrudService service = new CrudService(getContext());
         if (nowListPage==0x00){
@@ -239,6 +256,7 @@ public class DashboardFragment extends Fragment {
         }service.close();
     }
 
+    //加载商品or进货单数据到table
     private void loadData(){
         final Context context = this.getContext();
         switch (nowListPage){
@@ -301,14 +319,9 @@ public class DashboardFragment extends Fragment {
                     uiHandler.sendEmptyMessage(0x08);
                     return;
                 }
-                final float scale = context.getResources().getDisplayMetrics().density;
                 for(int i=0;i<purOrderList.size();i++){
                     final LinearLayout row=(LinearLayout) LayoutInflater.from(context).inflate(R.layout.list_item,null);
-//                    if (i%2!=0) row.setBackgroundResource(R.drawable.list_item_bg2);
                     final PurchaseOrder purchaseOrder = purOrderList.get(i);
-                    Bitmap temp = BitmapFactory.decodeFile(purchaseOrder.getDataUri());
-                    final Bitmap bitmap=MainActivity.centerSquareScaleBitmap(temp,100,scale);
-                    ((ImageView)row.findViewById(R.id.pur_img_item)).setImageBitmap(bitmap);
                     ((TextView)row.findViewById(R.id.pur_supplier_item)).setText(purchaseOrder.getSupplier());
                     ((TextView)row.findViewById(R.id.pur_date_item)).setText(purchaseOrder.getDate());
                     row.setOnClickListener(new View.OnClickListener() {
@@ -338,7 +351,7 @@ public class DashboardFragment extends Fragment {
                                             final Dialog dialogChoose= builder.create();
                                             dialogChoose.show();
                                             final View root= LayoutInflater.from(context).inflate(R.layout.fragment_dashboard, null);
-                                            ((EditText)root.findViewById(R.id.text_search)).setWidth((int)(root.getWidth()*.15));
+                                            ((EditText)root.findViewById(R.id.text_search)).setWidth((int)(root.getWidth()*.5));
                                             root.findViewById(R.id.btn_add).setAlpha(0f);
                                             root.findViewById(R.id.btn_add).setEnabled(false);
                                             root.findViewById(R.id.btn_jumpPage).setAlpha(0f);
@@ -379,6 +392,7 @@ public class DashboardFragment extends Fragment {
                                             dialogInput.setCancelable(false);
                                             final View root= LayoutInflater.from(context).inflate(R.layout.suretoadd_purorder_page, null);
                                             ((TextView)root.findViewById(R.id.addPurOrder_title)).setText("修改进货单");
+                                            Bitmap bitmap = compImgs.get(rowIndex);
                                             ((ImageView)root.findViewById(R.id.img_addingPurOrder)).setImageBitmap(bitmap);
                                             final String supplier = purchaseOrder.getSupplier();
                                             ((EditText)root.findViewById(R.id.addPurOrder_supplier)).setText(supplier);
@@ -418,7 +432,7 @@ public class DashboardFragment extends Fragment {
                                                     String update_supplier =et_supplier.getText().toString().replaceAll(" ","");
                                                     if (update_supplier.length()<1)update_supplier="未填写";
                                                     if (!supplier.equals(update_supplier)||!date.equals(update_date))
-                                                    modifyPurOrderInfo(new PurchaseOrder(purchaseOrder.getId(),update_supplier,update_date),rowIndex);
+                                                    modifyPurOrderInfo(new PurchaseOrder(purchaseOrder.getId(),update_supplier,update_date,purchaseOrder.getDataUri()),rowIndex);
                                                     dialogInput.dismiss();
                                                 }
                                             });
@@ -461,7 +475,8 @@ public class DashboardFragment extends Fragment {
                     });
                     tableBody.addView(row);
                 }
-                uiHandler.sendEmptyMessageDelayed(0x08,50);
+                uiHandler.sendEmptyMessage(0x08);
+                asynchronousLoadPurImgs(context,tableBody,purOrderList);
                 break;
             }
         }
@@ -551,6 +566,7 @@ public class DashboardFragment extends Fragment {
         });
     }
 
+    //查询
     private void doSearch(){
         if(nowSearchWord.length()==1){
             Toast.makeText(getContext(),"至少输入2位字符进行搜索！",Toast.LENGTH_SHORT).show();
@@ -578,6 +594,7 @@ public class DashboardFragment extends Fragment {
         loadData();
     }
 
+    //获取多选框items的内容 & 默认选中的items
     private ArrayList<ArrayList<String>> getChooseItemsAndDefaultSelectedList(String purId,String search){
         CrudService service = new CrudService(getContext());
         ArrayList<String> goodsNames = service.getGoodsNameListByPurOrderId(purId);
@@ -602,6 +619,7 @@ public class DashboardFragment extends Fragment {
         return list;
     }
 
+    //加载多选框的items & btn
     private void loadChoiceDialogItems(final Context context,final Dialog dialogChoose,final LinearLayout header,final LinearLayout tableBody, final PurchaseOrder purchaseOrder,String word){
         ArrayList<ArrayList<String>> itemList = getChooseItemsAndDefaultSelectedList(purchaseOrder.getId(),word);
         final String[] items= itemList.get(0).toArray(new String[0]);
@@ -690,15 +708,44 @@ public class DashboardFragment extends Fragment {
         header.addView(button);
     }
 
+    //修改进货单信息
     private void modifyPurOrderInfo(PurchaseOrder purO,int rowIndex){
         Context context = getContext();
         CrudService service = new CrudService(context);
         service.updatePurOrder(purO);service.close();
         purOrderList.set(rowIndex,purO);
-        ((TextView)tableBody.getChildAt(rowIndex).findViewById(R.id.pur_supplier_item)).setText(purO.getSupplier());
-        ((TextView)tableBody.getChildAt(rowIndex).findViewById(R.id.pur_date_item)).setText(purO.getDate());
-        Toast.makeText(context,"更新成功！",Toast.LENGTH_SHORT).show();
+//        ((TextView)tableBody.getChildAt(rowIndex).findViewById(R.id.pur_supplier_item)).setText(purO.getSupplier());
+//        ((TextView)tableBody.getChildAt(rowIndex).findViewById(R.id.pur_date_item)).setText(purO.getDate());
+        tableBody.removeAllViews();
         loadData();// TODO: 2020/10/23 看看卡不卡
+        Toast.makeText(context,"更新成功！",Toast.LENGTH_SHORT).show();
+    }
+
+    //异步加载进货单图片
+    private void asynchronousLoadPurImgs(Context context, final LinearLayout table, final ArrayList<PurchaseOrder> purOrderList){
+        final float density = context.getResources().getDisplayMetrics().density;
+        compImgs.clear();
+        new Thread(){
+            @Override
+            public void run() {
+                for (int i = 0; i < purOrderList.size(); i++) {
+                    PurchaseOrder pur = purOrderList.get(i);
+                    Bitmap temp = BitmapFactory.decodeFile(pur.getDataUri());
+                    final Bitmap bitmap = MainActivity.centerSquareScaleBitmap(temp, 180, density);
+                    compImgs.add(bitmap);
+//                    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+//                    bitmap.compress(Bitmap.CompressFormat.JPEG, 100, baos);
+//                    byte[] data = baos.toByteArray();
+                    Bundle bundle = new Bundle();
+                    bundle.putInt("index",i);
+                    Message msg = new Message();
+                    msg.what = 0x07;
+                    msg.obj=table;
+                    msg.setData(bundle);
+                    uiHandler.sendMessage(msg);
+                }
+            }
+        }.start();
     }
 
     synchronized private void showGoodsInfoPage(final int rowNumber){
@@ -741,6 +788,12 @@ public class DashboardFragment extends Fragment {
 //                .replace("[请选择","").replace("]","");
         String units="个包件箱条罐听瓶排支袋副提盒桶斤卷";
         spinner_unit.setSelection(units.indexOf(goods.getUnit())+1,true);
+        view.findViewById(R.id.showGoods_PurchaseOrder).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                showPurchaseOrderPage();
+            }
+        });
         cancel.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -794,8 +847,147 @@ public class DashboardFragment extends Fragment {
         dialog.getWindow().setContentView(root);
         ImageView imgV=root.findViewById(R.id.img_fullscreen);
         String uri= purchaseOrder.getDataUri();
-        Bitmap bitmap = BitmapFactory.decodeFile(uri);
+        Bitmap bitmap= BitmapFactory.decodeFile(uri);
         imgV.setImageBitmap(bitmap);
         imgV.setScaleType(ImageView.ScaleType.FIT_CENTER);
+    }
+
+    public void showPurchaseOrderPage(){
+        final Context context = getContext();
+        View root= LayoutInflater.from(context).inflate(R.layout.purchaseorder_page, null);
+        AlertDialog.Builder builder= new AlertDialog.Builder(context,R.style.Dialog_Fullscreen);
+        final Dialog dialog= builder.create();
+        dialog.show();
+        dialog.getWindow().setContentView(root);
+        purListView=root.findViewById(R.id.purList_table);
+        CrudService service = new CrudService(context);
+        final ArrayList<PurchaseOrder> purOrderList = service.getPurOrderListByGoodsId(MainActivity.goods.getId());
+        service.close();
+        if (purOrderList.size()<1){
+            TextView tV = new TextView(context);
+            tV.setWidth(tableHeader.getWidth());
+            tV.setTextAlignment(View.TEXT_ALIGNMENT_CENTER);
+            tV.setText("该商品未添加进货单！");
+            tV.setTextSize(24);
+            purListView.addView(tV);
+            return;
+        }
+        for (int i = 0; i < purOrderList.size(); i++) {
+            final PurchaseOrder pur = purOrderList.get(i);
+            final LinearLayout row = (LinearLayout) LayoutInflater.from(context).inflate(R.layout.list_item, null);
+            ((TextView) row.findViewById(R.id.pur_supplier_item)).setText(pur.getSupplier());
+            ((TextView) row.findViewById(R.id.pur_date_item)).setText(pur.getDate());
+            row.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    showPurOrderInfoPage(pur);
+                }
+            });
+            final int rowIndex=i;
+            row.findViewById(R.id.pur_btn_item).setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    final String[] items = {"   修改当前进货单信息","   取消关联当前进货单",
+                            "                                                   返回"};
+                    AlertDialog.Builder listDialog = new AlertDialog.Builder(context);
+                    listDialog.setIcon(R.drawable.operating);
+                    listDialog.setTitle("请选择");
+                    listDialog.setCancelable(false);
+                    listDialog.setItems(items, new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            switch (which){
+                                /*修改进货单信息*/
+                                case 0:{
+                                    AlertDialog.Builder builder= new AlertDialog.Builder(context);
+                                    final Dialog dialogInput= builder.create();
+                                    dialogInput.show();
+                                    dialogInput.setCancelable(false);
+                                    final View root= LayoutInflater.from(context).inflate(R.layout.suretoadd_purorder_page, null);
+                                    ((TextView)root.findViewById(R.id.addPurOrder_title)).setText("修改进货单");
+                                    Bitmap bitmap = compImgs.get(rowIndex);
+                                    ((ImageView)root.findViewById(R.id.img_addingPurOrder)).setImageBitmap(bitmap);
+                                    final String supplier = pur.getSupplier();
+                                    ((EditText)root.findViewById(R.id.addPurOrder_supplier)).setText(supplier);
+                                    final String date = pur.getDate();
+                                    ((Button)root.findViewById(R.id.addPurOrder_date)).setText(date);
+                                    Window dialogWindow = dialogInput.getWindow();
+                                    dialogWindow.setContentView(root);
+                                    dialogWindow.clearFlags(WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM);
+                                    (root.findViewById(R.id.addPurOrder_cancel)).setOnClickListener(new View.OnClickListener() {
+                                        @Override
+                                        public void onClick(View view) {
+                                            dialogInput.dismiss();
+                                        }
+                                    });
+                                    final Button et_date= root.findViewById(R.id.addPurOrder_date);
+                                    et_date.setOnClickListener(new View.OnClickListener() {
+                                        @RequiresApi(api = Build.VERSION_CODES.N)
+                                        @Override
+                                        public void onClick(View view) {
+                                            DatePickerDialog datePickerDialog = new DatePickerDialog(context, DatePickerDialog.THEME_HOLO_LIGHT);
+                                            DatePicker picker = datePickerDialog.getDatePicker();
+                                            picker.setMaxDate(new Date().getTime());
+                                            datePickerDialog.setOnDateSetListener(new DatePickerDialog.OnDateSetListener() {
+                                                @Override
+                                                public void onDateSet(DatePicker datePicker, int year, int month, int day) {
+                                                    et_date.setText(year +"-"+(month+1)+"-"+day);
+                                                }
+                                            });
+                                            datePickerDialog.show();
+                                        }
+                                    });
+                                    final EditText et_supplier= root.findViewById(R.id.addPurOrder_supplier);
+                                    (root.findViewById(R.id.addPurOrder_ok)).setOnClickListener(new View.OnClickListener() {
+                                        @Override
+                                        public void onClick(View view) {
+                                            String update_date = et_date.getText().toString();
+                                            String update_supplier =et_supplier.getText().toString().replaceAll(" ","");
+                                            if (update_supplier.length()<1)update_supplier="未填写";
+                                            if (!supplier.equals(update_supplier)||!date.equals(update_date))
+                                                modifyPurOrderInfo(new PurchaseOrder(pur.getId(),update_supplier,update_date,pur.getDataUri()),rowIndex);
+                                            dialogInput.dismiss();
+                                        }
+                                    });
+                                    break;
+                                }
+                                /*取消关联当前进货单*/
+                                case 1:{
+                                    final AlertDialog.Builder alterDiaglog = new AlertDialog.Builder(context);
+                                    alterDiaglog.setIcon(R.drawable.error);//图标
+                                    alterDiaglog.setTitle("系统提示");//文字
+                                    alterDiaglog.setMessage("\n 确定取消关联当前进货单吗？");//提示消息
+                                    //积极的选择
+                                    alterDiaglog.setPositiveButton("取消", new DialogInterface.OnClickListener() {
+                                        @Override
+                                        public void onClick(DialogInterface dialog, int which) {}
+                                    });
+                                    //消极的选择
+                                    alterDiaglog.setNegativeButton("确定", new DialogInterface.OnClickListener() {
+                                        @Override
+                                        public void onClick(DialogInterface dialog, int which) {
+                                            CrudService service = new CrudService(context);
+                                            String msg="操作失败！";
+                                            if (service.unlinkPurOrder(MainActivity.goods,pur)){
+                                                msg="操作成功！";
+                                                purListView.removeView(row);
+                                            }service.close();
+                                            Toast.makeText(context,msg,Toast.LENGTH_SHORT).show();
+                                        }
+                                    });
+                                    alterDiaglog.show();
+                                    break;
+                                }
+                                /*返回*/
+                                case 2:{}
+                            }
+                        }
+                    });
+                    listDialog.show();
+                }
+            });
+            purListView.addView(row);
+        }
+        asynchronousLoadPurImgs(context,purListView,purOrderList);
     }
 }
