@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:orientation="horizontal" android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="2dp"
+    android:background="@drawable/list_item_bg">
+
+    <CheckBox
+        android:id="@+id/pur_item_checkBox"
+        android:layout_width="wrap_content"
+        android:layout_height="111dp"
+        android:background="#ddd"
+        android:gravity="center_vertical"
+        android:checked="false"/>
+    <ImageView
+        android:id="@+id/pur_img_item"
+        android:layout_width="100dp"
+        android:layout_height="100dp"
+        android:layout_marginTop="5dp"
+        android:layout_marginBottom="6dp"
+        android:layout_marginStart="20dp"
+        android:layout_marginEnd="10dp"
+        android:contentDescription="@string/title_home" />
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="0dp"
+        android:layout_weight="9"
+        android:layout_height="110dp"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/pur_supplier_item"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_marginTop="8dp"
+            android:padding="5dp"
+            android:textColor="#eee"
+            android:textSize="20sp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <TextView
+            android:id="@+id/pur_date_item"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_marginBottom="8dp"
+            android:padding="5dp"
+            android:textColor="#eee"
+            android:textSize="20sp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:background="#fff"
+        android:layout_weight=".5"/>
+</LinearLayout>

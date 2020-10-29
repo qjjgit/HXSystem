@@ -261,4 +261,22 @@ public class CrudService {
             db.endTransaction();
         }
     }
+
+    public boolean bindingPurOrder2Goods(ArrayList<PurchaseOrder> purChoices, Integer goods_id) {
+        db.beginTransaction();
+        try {
+            String sql0="delete from goods_pur_o where goods_id="+goods_id;
+            db.execSQL(sql0);//先清除旧数据
+            for (PurchaseOrder pur : purChoices) {
+                String sql="insert into goods_pur_o('goods_id','pur_id') values(?,\""+pur.getId()+"\")";
+                db.execSQL(sql,new Object[]{goods_id});
+            }
+            db.setTransactionSuccessful();
+            return true;
+        }catch (Exception e){
+            return false;
+        }finally {
+            db.endTransaction();
+        }
+    }
 }

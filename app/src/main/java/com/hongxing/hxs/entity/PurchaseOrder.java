@@ -1,6 +1,8 @@
 package com.hongxing.hxs.entity;
 
 
+import androidx.annotation.Nullable;
+
 public class PurchaseOrder {
     private String id;
     private String supplier;
@@ -26,11 +28,19 @@ public class PurchaseOrder {
     @Override
     public String toString() {
         return "PurchaseOrder{" +
-                "id='" + id + '\'' +
+//                "id='" + id + '\'' +
                 ", supplier='" + supplier + '\'' +
                 ", date='" + date + '\'' +
                 ", data_uri='" + data_uri + '\'' +
                 '}';
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj==null)return false;
+        if (!(obj instanceof PurchaseOrder))return false;
+        PurchaseOrder p=(PurchaseOrder)obj;
+        return this.getId().equals(p.getId());
     }
 
     public String getId() {

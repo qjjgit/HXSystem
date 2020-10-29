@@ -40,6 +40,7 @@ import com.hongxing.hxs.entity.PurchaseOrder;
 import com.hongxing.hxs.other.MyViewBinder;
 import com.hongxing.hxs.service.CrudService;
 import com.hongxing.hxs.utils.GoodsUtils;
+import com.hongxing.hxs.utils.StatusCode;
 import com.huawei.hms.hmsscankit.ScanUtil;
 import com.huawei.hms.ml.scan.HmsScan;
 import com.huawei.hms.ml.scan.HmsScanAnalyzerOptions;
@@ -65,9 +66,8 @@ import java.util.UUID;
 
 public class MainActivity extends AppCompatActivity {
 
-    public static final int DEFAULT_VIEW = 0x22;
+    private static final int DEFAULT_VIEW = 0x22;
     private static final int REQUEST_CODE_SCAN = 0X01;
-    private static final int REQUEST_CODE_SHOOT = 0X02;
 
     private static boolean isQuit = false;
     private Timer timer = new Timer();
@@ -76,7 +76,7 @@ public class MainActivity extends AppCompatActivity {
     private ListView listView_PurOrderBody=null;
     private List<Map<String,Object>> lists=null;
     private SimpleAdapter adapter=null;
-    private File showPIC=null;
+    public static File showPIC=null;
     public static String APPStoragePath;
 
     @Override
@@ -129,7 +129,7 @@ public class MainActivity extends AppCompatActivity {
         //receive result after your activity finished scanning
         super.onActivityResult(requestCode, resultCode, data);
         if (resultCode != RESULT_OK ) {
-            if (requestCode==REQUEST_CODE_SHOOT){
+            if (requestCode==StatusCode.REQUEST_CODE_SHOOT){
                 showPIC.delete();
             }
             return;
@@ -151,7 +151,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         //拍照 进货单结果
-        if (requestCode == REQUEST_CODE_SHOOT){
+        if (requestCode == StatusCode.REQUEST_CODE_SHOOT){
             View view= LayoutInflater.from(this).inflate(R.layout.suretoadd_purorder_page, null);
             final Bitmap bitmap_orig = BitmapFactory.decodeFile(showPIC.getPath());
             final Bitmap bitmap_comp=centerSquareScaleBitmap(bitmap_orig, 200,getResources().getDisplayMetrics().density);
@@ -201,7 +201,6 @@ public class MainActivity extends AppCompatActivity {
                 }
             });
         }
-
     }
     //确认添加进货单
     public void sureToAdd_purOrder(Bitmap bitmap_comp,String strDate,String supplier){
@@ -437,7 +436,7 @@ public class MainActivity extends AppCompatActivity {
             Uri imgUri= FileProvider.getUriForFile(this,getPackageName()+".fileprovider", file);
             intent.putExtra(MediaStore.EXTRA_OUTPUT,imgUri);//指定系统相机拍照保存在imageFileUri所指的位置
         }
-        startActivityForResult(intent, REQUEST_CODE_SHOOT);
+        startActivityForResult(intent,StatusCode.REQUEST_CODE_SHOOT);
     }
 
     //创建进货单图像文件

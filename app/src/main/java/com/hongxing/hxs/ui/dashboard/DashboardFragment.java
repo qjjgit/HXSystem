@@ -7,13 +7,17 @@ import android.app.Dialog;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
+import android.graphics.drawable.Drawable;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.provider.MediaStore;
 import android.util.DisplayMetrics;
 import android.view.Gravity;
 import android.view.KeyEvent;
@@ -30,7 +34,6 @@ import android.widget.DatePicker;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
-import android.widget.RelativeLayout;
 import android.widget.SimpleAdapter;
 import android.widget.Spinner;
 import android.widget.TextView;
@@ -39,6 +42,7 @@ import android.widget.Toast;
 import androidx.annotation.Nullable;
 import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
+import androidx.core.content.FileProvider;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProviders;
@@ -50,6 +54,7 @@ import com.hongxing.hxs.entity.PurchaseOrder;
 import com.hongxing.hxs.other.MyViewBinder;
 import com.hongxing.hxs.service.CrudService;
 import com.hongxing.hxs.utils.GoodsUtils;
+import com.hongxing.hxs.utils.StatusCode;
 
 import java.io.File;
 import java.text.Collator;
@@ -62,6 +67,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.UUID;
 
 public class DashboardFragment extends Fragment {
 
@@ -85,7 +91,6 @@ public class DashboardFragment extends Fragment {
         dashboardViewModel =
                 ViewModelProviders.of(this).get(DashboardViewModel.class);
         final View root = inflater.inflate(R.layout.fragment_dashboard, container, false);
-//        final TextView textView = root.findViewById(R.id.text_dashboard);
         dashboardViewModel.getText().observe(this, new Observer<String>() {
             @Override
             public void onChanged(@Nullable String s) {
@@ -130,6 +135,71 @@ public class DashboardFragment extends Fragment {
         });
         return root;
     }
+
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (resultCode != MainActivity.RESULT_OK ) {
+            if (requestCode== StatusCode.REQUEST_CODE_SHOOT){
+                MainActivity.showPIC.delete();
+            }
+            return;
+        }
+        //拍照 进货单结果
+        if (requestCode == StatusCode.REQUEST_CODE_SHOOT){
+            final Context context = getContext();
+            View view= LayoutInflater.from(context).inflate(R.layout.suretoadd_purorder_page, null);
+            final Bitmap bitmap_orig = BitmapFactory.decodeFile(MainActivity.showPIC.getPath());
+            final Bitmap bitmap_comp=MainActivity.centerSquareScaleBitmap(bitmap_orig, 200,getResources().getDisplayMetrics().density);
+            ImageView imgView=view.findViewById(R.id.img_addingPurOrder);
+            imgView.setImageBitmap(bitmap_comp);
+            AlertDialog.Builder builder= new AlertDialog.Builder(context);
+            final Dialog dialog= builder.create();
+            dialog.show();
+            dialog.getWindow().setContentView(view);
+            dialog.getWindow().clearFlags(WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM);
+            dialog.setCancelable(false);
+            (view.findViewById(R.id.addPurOrder_cancel)).setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    dialog.dismiss();
+                    MainActivity.showPIC.delete();
+                }
+            });
+            final Button addPurOrder_date= view.findViewById(R.id.addPurOrder_date);
+            addPurOrder_date.setOnClickListener(new View.OnClickListener() {
+                @RequiresApi(api = Build.VERSION_CODES.N)
+                @Override
+                public void onClick(View view) {
+                    DatePickerDialog datePickerDialog = new DatePickerDialog(context, DatePickerDialog.THEME_HOLO_LIGHT);
+                    datePickerDialog.getDatePicker().setMaxDate(new Date().getTime());
+                    datePickerDialog.setOnDateSetListener(new DatePickerDialog.OnDateSetListener() {
+                        @Override
+                        public void onDateSet(DatePicker datePicker, int year, int month, int day) {
+                            addPurOrder_date.setText(year +"-"+(month+1)+"-"+day);
+                        }
+                    });
+                    datePickerDialog.show();
+                }
+            });
+            final EditText addPurOrder_supplier= view.findViewById(R.id.addPurOrder_supplier);
+            (view.findViewById(R.id.addPurOrder_ok)).setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    String strDate = addPurOrder_date.getText().toString();
+                    if ("请选择".equals(strDate)){
+                        Toast.makeText(context,"请先填入进货单的日期！",Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    String supplier =addPurOrder_supplier.getText().toString().replaceAll(" ","");
+                    if (supplier.length()<1)supplier="未填写";
+                    sureToAdd_purOrder(context,strDate,supplier);
+                    dialog.dismiss();
+                }
+            });
+        }
+    }
+
     @SuppressLint("HandlerLeak")
     private void AsynchronousLoading(){
         if (progressDialog==null) {
@@ -137,8 +207,8 @@ public class DashboardFragment extends Fragment {
             progressDialog.setMessage("加载中...");
             progressDialog.setIndeterminate(true);
             progressDialog.setCancelable(false);
-            progressDialog.show();
         }
+        progressDialog.show();
         if (uiHandler==null)
         uiHandler=new Handler(){
             @Override
@@ -155,10 +225,12 @@ public class DashboardFragment extends Fragment {
                     case 0x07:{
                         Bundle data = msg.getData();
                         int index = data.getInt("index");
-//                        byte[] imgData = data.getByteArray("imgData");
-//                        Bitmap bitmap = BitmapFactory.decodeByteArray(imgData, 0, imgData.length);
                         Bitmap bitmap = compImgs.get(index);
-                        ((ImageView)table.getChildAt(index).findViewById(R.id.pur_img_item)).setImageBitmap(bitmap);
+                        try {
+                            ((ImageView)table.getChildAt(index).findViewById(R.id.pur_img_item)).setImageBitmap(bitmap);
+                        }catch (Exception e){
+                            e.printStackTrace();
+                        }
                         break;
                     }
                     case 0x08:{
@@ -237,23 +309,29 @@ public class DashboardFragment extends Fragment {
         if (nowListPage==0x01){
             purOrderList=service.findPurOrderByWord(nowSearchWord);
             if (purOrderList.size()>1){
-                final SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
-                Collections.sort(purOrderList, new Comparator<PurchaseOrder>() {
-                    @Override
-                    public int compare(PurchaseOrder p1, PurchaseOrder p2) {
-                        try {
-                            long d1 = format.parse(p1.getDate()).getTime();
-                            long d2 = format.parse(p2.getDate()).getTime();
-                            if(d1<d2)return 1;
-                            if(d1>d2)return -1;
-                        } catch (ParseException e) {
-                            Toast.makeText(getContext(),e.getMessage(),Toast.LENGTH_SHORT).show();
-                        }
-                        return 0;
-                    }
-                });
+                purListSortByTime(purOrderList);
             }
         }service.close();
+    }
+
+    //按时间倒序 排进货单
+    private void purListSortByTime(ArrayList<PurchaseOrder> purOrderList){
+        if (purOrderList==null||purOrderList.size()<2)return;
+        final SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd",Locale.CHINA);
+        Collections.sort(purOrderList, new Comparator<PurchaseOrder>() {
+            @Override
+            public int compare(PurchaseOrder p1, PurchaseOrder p2) {
+                try {
+                    long d1 = format.parse(p1.getDate()).getTime();
+                    long d2 = format.parse(p2.getDate()).getTime();
+                    if(d1<d2)return 1;
+                    if(d1>d2)return -1;
+                } catch (ParseException e) {
+                    Toast.makeText(getContext(),e.getMessage(),Toast.LENGTH_SHORT).show();
+                }
+                return 0;
+            }
+        });
     }
 
     //加载商品or进货单数据到table
@@ -324,158 +402,9 @@ public class DashboardFragment extends Fragment {
                     final PurchaseOrder purchaseOrder = purOrderList.get(i);
                     ((TextView)row.findViewById(R.id.pur_supplier_item)).setText(purchaseOrder.getSupplier());
                     ((TextView)row.findViewById(R.id.pur_date_item)).setText(purchaseOrder.getDate());
-                    row.setOnClickListener(new View.OnClickListener() {
-                        @Override
-                        public void onClick(View view) {
-                            showPurOrderInfoPage(purchaseOrder);
-                        }
-                    });
-                    final int rowIndex=i;
-                    row.findViewById(R.id.pur_btn_item).setOnClickListener(new View.OnClickListener() {
-                        @Override
-                        public void onClick(View view) {
-                            final String[] items = { "   添加/删除相关联的商品",
-                                        "   修改当前进货单信息","   删除当前进货单",
-                                        "                                                   返回"};
-                            AlertDialog.Builder listDialog = new AlertDialog.Builder(context);
-                            listDialog.setIcon(R.drawable.operating);
-                            listDialog.setTitle("请选择");
-                            listDialog.setCancelable(false);
-                            listDialog.setItems(items, new DialogInterface.OnClickListener() {
-                                @Override
-                                public void onClick(DialogInterface dialog, int which) {
-                                    switch (which){
-                                        /*增添进货单关联*/
-                                        case 0:{
-                                            AlertDialog.Builder builder= new AlertDialog.Builder(context);
-                                            final Dialog dialogChoose= builder.create();
-                                            dialogChoose.show();
-                                            final View root= LayoutInflater.from(context).inflate(R.layout.fragment_dashboard, null);
-                                            ((EditText)root.findViewById(R.id.text_search)).setWidth((int)(root.getWidth()*.5));
-                                            root.findViewById(R.id.btn_add).setAlpha(0f);
-                                            root.findViewById(R.id.btn_add).setEnabled(false);
-                                            root.findViewById(R.id.btn_jumpPage).setAlpha(0f);
-                                            root.findViewById(R.id.btn_jumpPage).setEnabled(false);
-                                            Window dialogWindow = dialogChoose.getWindow();
-                                            dialogWindow.setContentView(root);
-                                            dialogWindow.clearFlags(WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM);
-                                            DisplayMetrics metrics = new DisplayMetrics();
-                                            dialogWindow.getWindowManager().getDefaultDisplay().getRealMetrics(metrics);
-                                            WindowManager.LayoutParams attr = dialogWindow.getAttributes();
-                                            attr.height=(int)(metrics.heightPixels*0.9f);
-                                            attr.width=(int)(metrics.widthPixels*1f);
-                                            attr.gravity= Gravity.FILL_HORIZONTAL;
-                                            attr.alpha=1f;
-                                            dialogWindow.setAttributes(attr);
-                                            final LinearLayout header = root.findViewById(R.id.MyTableHeader);
-                                            final LinearLayout tableBody=root.findViewById(R.id.MyTable);
-                                            loadChoiceDialogItems(context,dialogChoose,header,tableBody,purchaseOrder,null);
-                                            //查询
-                                            final EditText et=root.findViewById(R.id.text_search);
-                                            (root.findViewById(R.id.btn_search)).setOnClickListener(new View.OnClickListener() {
-                                                @Override
-                                                public void onClick(View view) {
-                                                    final String word = et.getText().toString().replaceAll(" ", "");
-                                                    et.setText(word);et.setSelection(word.length());
-                                                    header.removeAllViews();
-                                                    tableBody.removeAllViews();
-                                                    loadChoiceDialogItems(context,dialogChoose,header,tableBody,purchaseOrder,word);
-                                                }
-                                            });
-                                            break;
-                                        }
-                                        /*修改进货单信息*/
-                                        case 1:{
-                                            AlertDialog.Builder builder= new AlertDialog.Builder(context);
-                                            final Dialog dialogInput= builder.create();
-                                            dialogInput.show();
-                                            dialogInput.setCancelable(false);
-                                            final View root= LayoutInflater.from(context).inflate(R.layout.suretoadd_purorder_page, null);
-                                            ((TextView)root.findViewById(R.id.addPurOrder_title)).setText("修改进货单");
-                                            Bitmap bitmap = compImgs.get(rowIndex);
-                                            ((ImageView)root.findViewById(R.id.img_addingPurOrder)).setImageBitmap(bitmap);
-                                            final String supplier = purchaseOrder.getSupplier();
-                                            ((EditText)root.findViewById(R.id.addPurOrder_supplier)).setText(supplier);
-                                            final String date = purchaseOrder.getDate();
-                                            ((Button)root.findViewById(R.id.addPurOrder_date)).setText(date);
-                                            Window dialogWindow = dialogInput.getWindow();
-                                            dialogWindow.setContentView(root);
-                                            dialogWindow.clearFlags(WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM);
-                                            (root.findViewById(R.id.addPurOrder_cancel)).setOnClickListener(new View.OnClickListener() {
-                                                @Override
-                                                public void onClick(View view) {
-                                                    dialogInput.dismiss();
-                                                }
-                                            });
-                                            final Button et_date= root.findViewById(R.id.addPurOrder_date);
-                                            et_date.setOnClickListener(new View.OnClickListener() {
-                                                @RequiresApi(api = Build.VERSION_CODES.N)
-                                                @Override
-                                                public void onClick(View view) {
-                                                    DatePickerDialog datePickerDialog = new DatePickerDialog(context, DatePickerDialog.THEME_HOLO_LIGHT);
-                                                    DatePicker picker = datePickerDialog.getDatePicker();
-                                                    picker.setMaxDate(new Date().getTime());
-                                                    datePickerDialog.setOnDateSetListener(new DatePickerDialog.OnDateSetListener() {
-                                                        @Override
-                                                        public void onDateSet(DatePicker datePicker, int year, int month, int day) {
-                                                            et_date.setText(year +"-"+(month+1)+"-"+day);
-                                                        }
-                                                    });
-                                                    datePickerDialog.show();
-                                                }
-                                            });
-                                            final EditText et_supplier= root.findViewById(R.id.addPurOrder_supplier);
-                                            (root.findViewById(R.id.addPurOrder_ok)).setOnClickListener(new View.OnClickListener() {
-                                                @Override
-                                                public void onClick(View view) {
-                                                    String update_date = et_date.getText().toString();
-                                                    String update_supplier =et_supplier.getText().toString().replaceAll(" ","");
-                                                    if (update_supplier.length()<1)update_supplier="未填写";
-                                                    if (!supplier.equals(update_supplier)||!date.equals(update_date))
-                                                    modifyPurOrderInfo(new PurchaseOrder(purchaseOrder.getId(),update_supplier,update_date,purchaseOrder.getDataUri()),rowIndex);
-                                                    dialogInput.dismiss();
-                                                }
-                                            });
-                                            break;
-                                        }
-                                        /*删除进货单*/
-                                        case 2:{
-                                            final AlertDialog.Builder alterDiaglog = new AlertDialog.Builder(context);
-                                            alterDiaglog.setIcon(R.drawable.error);//图标
-                                            alterDiaglog.setTitle("系统提示");//文字
-                                            alterDiaglog.setMessage("\n 确定删除当前进货单吗？");//提示消息
-                                            //积极的选择
-                                            alterDiaglog.setPositiveButton("取消", new DialogInterface.OnClickListener() {
-                                                @Override
-                                                public void onClick(DialogInterface dialog, int which) {}
-                                            });
-                                            //消极的选择
-                                            alterDiaglog.setNegativeButton("确定", new DialogInterface.OnClickListener() {
-                                                @Override
-                                                public void onClick(DialogInterface dialog, int which) {
-                                                    CrudService service = new CrudService(context);
-                                                    String msg="删除失败！";
-                                                    if (service.deletePurOrder(purchaseOrder)){
-                                                        msg="删除成功！";
-                                                        tableBody.removeView(row);
-                                                    }service.close();
-                                                    Toast.makeText(context,msg,Toast.LENGTH_SHORT).show();
-                                                }
-                                            });
-                                            alterDiaglog.show();
-                                            break;
-                                        }
-                                        /*返回*/
-                                        case 3:{}
-                                    }
-                                }
-                            });
-                            listDialog.show();
-                        }
-                    });
+                    setPurItemOnClickEvent(context,row,purchaseOrder,i,StatusCode.IN_TABLE_BODY);
                     tableBody.addView(row);
                 }
-                uiHandler.sendEmptyMessage(0x08);
                 asynchronousLoadPurImgs(context,tableBody,purOrderList);
                 break;
             }
@@ -594,120 +523,6 @@ public class DashboardFragment extends Fragment {
         loadData();
     }
 
-    //获取多选框items的内容 & 默认选中的items
-    private ArrayList<ArrayList<String>> getChooseItemsAndDefaultSelectedList(String purId,String search){
-        CrudService service = new CrudService(getContext());
-        ArrayList<String> goodsNames = service.getGoodsNameListByPurOrderId(purId);
-        ArrayList<String> allNameList = service.getDistinctGoodsNameList(search);
-        service.close();
-        if (goodsNames==null)goodsNames=new ArrayList<>();
-        ArrayList<String> items = new ArrayList<>();
-        for ( int j=0;j<goodsNames.size();j++){
-            String item="["+(j+1)+"]      "+goodsNames.get(j);
-            items.add(item);
-        }
-        int i=0;
-        for (String name : allNameList){
-            if (goodsNames.contains(name))continue;
-            i++;
-            String item="["+(goodsNames.size()+i)+"]      "+ name;
-            items.add(item);
-        }
-        ArrayList<ArrayList<String>> list=new ArrayList<>();
-        list.add(items);
-        list.add(goodsNames);
-        return list;
-    }
-
-    //加载多选框的items & btn
-    private void loadChoiceDialogItems(final Context context,final Dialog dialogChoose,final LinearLayout header,final LinearLayout tableBody, final PurchaseOrder purchaseOrder,String word){
-        ArrayList<ArrayList<String>> itemList = getChooseItemsAndDefaultSelectedList(purchaseOrder.getId(),word);
-        final String[] items= itemList.get(0).toArray(new String[0]);
-        final ArrayList<String> defaultSelected = itemList.get(1);
-        final ArrayList<String> goodsNameChoices = new ArrayList<>();
-        for (int i=0;i<items.length;i++) {
-            if (defaultSelected.isEmpty()&&i==0){
-                TextView tv1 = new TextView(getContext());
-                String str="新增请勾选：";
-                if (defaultSelected.size()==items.length)str="\n         没有查询到相关商品";
-                tv1.setText(str);
-                tv1.setTextColor(Color.rgb(216,27,96));
-                tableBody.addView(tv1);
-            }
-            if (i==0&&defaultSelected.size()!=0){
-                try {
-                TextView tv2 = new TextView(getContext());
-                tv2.setText("已关联的：");
-                tv2.setTextColor(Color.rgb(216,27,96));
-                tableBody.addView(tv2);
-                if (defaultSelected.size()<1){
-                    tv2.setText("           无");
-                    tv2.setTextColor(Color.BLACK);
-                    tableBody.addView(tv2);
-                }
-                }catch (Exception e){
-                    Toast.makeText(getContext(),e.getMessage(),Toast.LENGTH_LONG).show();
-                }
-            }
-            String itemStr=items[i];
-            final CheckBox item = new CheckBox(context);
-            item.setText(itemStr);
-            final String goodsName = itemStr.substring(itemStr.lastIndexOf(" ")+1);
-            if (defaultSelected.contains(goodsName)){
-                goodsNameChoices.add(goodsName);
-                item.setChecked(true);}
-            item.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-                @Override
-                public void onCheckedChanged(CompoundButton compoundButton, boolean isChecked) {
-                    if (isChecked) {
-                        goodsNameChoices.add(goodsName);
-                    } else {
-                        goodsNameChoices.remove(goodsName);
-                    }
-                }
-            });
-            tableBody.addView(item);
-            if (i==defaultSelected.size()-1){
-                LinearLayout v = new LinearLayout(context);
-                v.setMinimumHeight(2);
-                WindowManager.LayoutParams attr = dialogChoose.getWindow().getAttributes();
-                v.setMinimumWidth((int)(attr.width*0.91f));
-                v.setBackgroundColor(Color.BLACK);
-                tableBody.addView(v);
-                TextView tv = new TextView(getContext());
-                String str="新增请勾选：";
-                if (defaultSelected.size()==items.length)str="\n         没有查询到相关商品";
-                tv.setText(str);
-                tv.setTextColor(Color.rgb(216,27,96));
-                tableBody.addView(tv);
-            }
-        }
-        header.setOrientation(LinearLayout.HORIZONTAL);
-        header.setGravity(Gravity.END);
-        header.setPadding(0, 1, 15, 1);
-        TextView textV = new TextView(context);
-        textV.setText("请勾选要关联的商品并点击提交    ");
-        header.addView(textV);
-        Button button = new Button(context);
-        button.setText("提交");
-        button.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                if (!goodsNameChoices.equals(defaultSelected)){
-                    CrudService service = new CrudService(context);
-                    String msg="关联失败！";
-                    if (service.bindingGoods2PurOrder(goodsNameChoices,purchaseOrder.getId())) {
-                        msg="关联成功！";
-                    }
-                    service.close();
-                    Toast.makeText(context,msg,Toast.LENGTH_SHORT).show();
-                }
-                dialogChoose.dismiss();
-            }
-        });
-        header.addView(button);
-    }
-
     //修改进货单信息
     private void modifyPurOrderInfo(PurchaseOrder purO,int rowIndex){
         Context context = getContext();
@@ -730,6 +545,7 @@ public class DashboardFragment extends Fragment {
             public void run() {
                 for (int i = 0; i < purOrderList.size(); i++) {
                     PurchaseOrder pur = purOrderList.get(i);
+                    if (pur==null){compImgs.add(null);continue;}
                     Bitmap temp = BitmapFactory.decodeFile(pur.getDataUri());
                     final Bitmap bitmap = MainActivity.centerSquareScaleBitmap(temp, 180, density);
                     compImgs.add(bitmap);
@@ -743,11 +559,13 @@ public class DashboardFragment extends Fragment {
                     msg.obj=table;
                     msg.setData(bundle);
                     uiHandler.sendMessage(msg);
-                }
+                }// TODO: 2020/10/29 使用缓存略缩图，不用每次都这样加载
+                uiHandler.sendEmptyMessage(0x08);
             }
         }.start();
     }
 
+    //显示商品信息
     synchronized private void showGoodsInfoPage(final int rowNumber){
         AlertDialog.Builder builder= new AlertDialog.Builder(getContext());
         final Dialog dialog= builder.create();
@@ -838,7 +656,8 @@ public class DashboardFragment extends Fragment {
         });
     }
 
-    synchronized private void showPurOrderInfoPage(PurchaseOrder purchaseOrder){
+    //全屏显示进货单图片
+    synchronized private void fullScreenShowPurOrder(PurchaseOrder purchaseOrder){
         Context context = getContext();
         AlertDialog.Builder builder= new AlertDialog.Builder(context,R.style.Dialog_Fullscreen);
         final Dialog dialog= builder.create();
@@ -852,13 +671,35 @@ public class DashboardFragment extends Fragment {
         imgV.setScaleType(ImageView.ScaleType.FIT_CENTER);
     }
 
-    public void showPurchaseOrderPage(){
+    //查看进货单列表
+    private void showPurchaseOrderPage(){
         final Context context = getContext();
         View root= LayoutInflater.from(context).inflate(R.layout.purchaseorder_page, null);
         AlertDialog.Builder builder= new AlertDialog.Builder(context,R.style.Dialog_Fullscreen);
         final Dialog dialog= builder.create();
         dialog.show();
         dialog.getWindow().setContentView(root);
+        //添加进货单
+        root.findViewById(R.id.btn_addPurOrder).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);//设置动作为调用照相机
+                File file = new MainActivity().createPhotoFile();
+                if (file!=null){
+                    MainActivity.showPIC=file;
+                    Uri imgUri= FileProvider.getUriForFile(context,context.getPackageName()+".fileprovider", file);
+                    intent.putExtra(MediaStore.EXTRA_OUTPUT,imgUri);//指定系统相机拍照保存在imageFileUri所指的位置
+                }
+                startActivityForResult(intent, StatusCode.REQUEST_CODE_SHOOT);
+            }
+        });
+        //关联现有进货单
+        root.findViewById(R.id.btn_linkPurOrder).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                showMultipleChoiceDialog(context,MainActivity.goods);
+            }
+        });
         purListView=root.findViewById(R.id.purList_table);
         CrudService service = new CrudService(context);
         final ArrayList<PurchaseOrder> purOrderList = service.getPurOrderListByGoodsId(MainActivity.goods.getId());
@@ -877,23 +718,47 @@ public class DashboardFragment extends Fragment {
             final LinearLayout row = (LinearLayout) LayoutInflater.from(context).inflate(R.layout.list_item, null);
             ((TextView) row.findViewById(R.id.pur_supplier_item)).setText(pur.getSupplier());
             ((TextView) row.findViewById(R.id.pur_date_item)).setText(pur.getDate());
-            row.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View view) {
-                    showPurOrderInfoPage(pur);
-                }
-            });
-            final int rowIndex=i;
-            row.findViewById(R.id.pur_btn_item).setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View view) {
-                    final String[] items = {"   修改当前进货单信息","   取消关联当前进货单",
+            setPurItemOnClickEvent(context,row,pur,i,StatusCode.IN_PURLIST_VIEW);
+            purListView.addView(row);
+        }
+        asynchronousLoadPurImgs(context,purListView,purOrderList);
+    }
+
+    //确定添加进货单
+    private void sureToAdd_purOrder(Context context, String strDate, String supplier){
+        PurchaseOrder purchaseOrder = new PurchaseOrder(UUID.randomUUID().toString(),supplier,strDate,MainActivity.showPIC.getPath());
+        CrudService service = new CrudService(context);
+        service.savePurchaseOrder(MainActivity.goods.getId(),purchaseOrder);
+        service.close();
+        final LinearLayout row = (LinearLayout) LayoutInflater.from(context).inflate(R.layout.list_item, null);
+        ((TextView) row.findViewById(R.id.pur_supplier_item)).setText(supplier);
+        ((TextView) row.findViewById(R.id.pur_date_item)).setText(strDate);
+        setPurItemOnClickEvent(context,row,purchaseOrder,purListView.getChildCount(),StatusCode.IN_PURLIST_VIEW);
+        purListView.addView(row);
+        Toast.makeText(context,"进货单添加成功！",Toast.LENGTH_SHORT).show();
+    }
+
+    //给进货单item添加onClick事件
+    private void setPurItemOnClickEvent(final Context context,final LinearLayout row,final PurchaseOrder pur,final int rowIndex,final int where){
+        row.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                fullScreenShowPurOrder(pur);
+            }
+        });
+        row.findViewById(R.id.pur_btn_item).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                AlertDialog.Builder listDialog = new AlertDialog.Builder(context);
+                listDialog.setIcon(R.drawable.operating);
+                listDialog.setTitle("请选择");
+                listDialog.setCancelable(false);
+                String[] items;
+                DialogInterface.OnClickListener listener;
+                if (where==StatusCode.IN_PURLIST_VIEW ){
+                    items = new String[]{"   修改当前进货单信息", "   取消关联当前进货单",
                             "                                                   返回"};
-                    AlertDialog.Builder listDialog = new AlertDialog.Builder(context);
-                    listDialog.setIcon(R.drawable.operating);
-                    listDialog.setTitle("请选择");
-                    listDialog.setCancelable(false);
-                    listDialog.setItems(items, new DialogInterface.OnClickListener() {
+                    listener=new DialogInterface.OnClickListener() {
                         @Override
                         public void onClick(DialogInterface dialog, int which) {
                             switch (which){
@@ -982,12 +847,382 @@ public class DashboardFragment extends Fragment {
                                 case 2:{}
                             }
                         }
-                    });
-                    listDialog.show();
+                    };
+                }
+                else {
+                    items = new String[]{"   添加/删除相关联的商品",
+                            "   修改当前进货单信息", "   删除当前进货单",
+                            "                                                   返回"};
+                    listener= new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            switch (which){
+                                /*增添进货单关联*/
+                                case 0:{
+                                    showMultipleChoiceDialog(context,pur);
+                                    break;
+                                }
+                                /*修改进货单信息*/
+                                case 1:{
+                                    AlertDialog.Builder builder= new AlertDialog.Builder(context);
+                                    final Dialog dialogInput= builder.create();
+                                    dialogInput.show();
+                                    dialogInput.setCancelable(false);
+                                    final View root= LayoutInflater.from(context).inflate(R.layout.suretoadd_purorder_page, null);
+                                    ((TextView)root.findViewById(R.id.addPurOrder_title)).setText("修改进货单");
+                                    Bitmap bitmap = compImgs.get(rowIndex);
+                                    ((ImageView)root.findViewById(R.id.img_addingPurOrder)).setImageBitmap(bitmap);
+                                    final String supplier = pur.getSupplier();
+                                    ((EditText)root.findViewById(R.id.addPurOrder_supplier)).setText(supplier);
+                                    final String date = pur.getDate();
+                                    ((Button)root.findViewById(R.id.addPurOrder_date)).setText(date);
+                                    Window dialogWindow = dialogInput.getWindow();
+                                    dialogWindow.setContentView(root);
+                                    dialogWindow.clearFlags(WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM);
+                                    (root.findViewById(R.id.addPurOrder_cancel)).setOnClickListener(new View.OnClickListener() {
+                                        @Override
+                                        public void onClick(View view) {
+                                            dialogInput.dismiss();
+                                        }
+                                    });
+                                    final Button et_date= root.findViewById(R.id.addPurOrder_date);
+                                    et_date.setOnClickListener(new View.OnClickListener() {
+                                        @RequiresApi(api = Build.VERSION_CODES.N)
+                                        @Override
+                                        public void onClick(View view) {
+                                            DatePickerDialog datePickerDialog = new DatePickerDialog(context, DatePickerDialog.THEME_HOLO_LIGHT);
+                                            DatePicker picker = datePickerDialog.getDatePicker();
+                                            picker.setMaxDate(new Date().getTime());
+                                            datePickerDialog.setOnDateSetListener(new DatePickerDialog.OnDateSetListener() {
+                                                @Override
+                                                public void onDateSet(DatePicker datePicker, int year, int month, int day) {
+                                                    et_date.setText(year +"-"+(month+1)+"-"+day);
+                                                }
+                                            });
+                                            datePickerDialog.show();
+                                        }
+                                    });
+                                    final EditText et_supplier= root.findViewById(R.id.addPurOrder_supplier);
+                                    (root.findViewById(R.id.addPurOrder_ok)).setOnClickListener(new View.OnClickListener() {
+                                        @Override
+                                        public void onClick(View view) {
+                                            String update_date = et_date.getText().toString();
+                                            String update_supplier =et_supplier.getText().toString().replaceAll(" ","");
+                                            if (update_supplier.length()<1)update_supplier="未填写";
+                                            if (!supplier.equals(update_supplier)||!date.equals(update_date))
+                                                modifyPurOrderInfo(new PurchaseOrder(pur.getId(),update_supplier,update_date,pur.getDataUri()),rowIndex);
+                                            dialogInput.dismiss();
+                                        }
+                                    });
+                                    break;
+                                }
+                                /*删除进货单*/
+                                case 2:{
+                                    final AlertDialog.Builder alterDiaglog = new AlertDialog.Builder(context);
+                                    alterDiaglog.setIcon(R.drawable.error);//图标
+                                    alterDiaglog.setTitle("系统提示");//文字
+                                    alterDiaglog.setMessage("\n 确定删除当前进货单吗？");//提示消息
+                                    //积极的选择
+                                    alterDiaglog.setPositiveButton("取消", new DialogInterface.OnClickListener() {
+                                        @Override
+                                        public void onClick(DialogInterface dialog, int which) {}
+                                    });
+                                    //消极的选择
+                                    alterDiaglog.setNegativeButton("确定", new DialogInterface.OnClickListener() {
+                                        @Override
+                                        public void onClick(DialogInterface dialog, int which) {
+                                            CrudService service = new CrudService(context);
+                                            String msg="删除失败！";
+                                            if (service.deletePurOrder(pur)){
+                                                msg="删除成功！";
+                                                tableBody.removeView(row);
+                                            }service.close();
+                                            Toast.makeText(context,msg,Toast.LENGTH_SHORT).show();
+                                        }
+                                    });
+                                    alterDiaglog.show();
+                                    break;
+                                }
+                                /*返回*/
+                                case 3:{}
+                            }
+                        }
+                    };
+                }
+                listDialog.setItems(items,listener);
+                listDialog.show();
+            }
+        });
+    }
+    
+    /*
+    *   显示 商品 或 进货单 多选框
+    *   obj为 Goods 或 PurOrder
+    */
+    private void showMultipleChoiceDialog(final Context context,final Object obj){
+        AlertDialog.Builder builder= new AlertDialog.Builder(context);
+        final Dialog dialogChoose= builder.create();
+        dialogChoose.show();
+        final View root= LayoutInflater.from(context).inflate(R.layout.fragment_dashboard, null);
+        ((EditText)root.findViewById(R.id.text_search)).setWidth((int)(root.getWidth()*.5));
+        root.findViewById(R.id.btn_add).setAlpha(0f);
+        root.findViewById(R.id.btn_add).setEnabled(false);
+        root.findViewById(R.id.btn_jumpPage).setAlpha(0f);
+        root.findViewById(R.id.btn_jumpPage).setEnabled(false);
+        Window dialogWindow = dialogChoose.getWindow();
+        dialogWindow.setContentView(root);
+        dialogWindow.clearFlags(WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM);
+        DisplayMetrics metrics = new DisplayMetrics();
+        dialogWindow.getWindowManager().getDefaultDisplay().getRealMetrics(metrics);
+        WindowManager.LayoutParams attr = dialogWindow.getAttributes();
+        attr.height=(int)(metrics.heightPixels*0.9f);
+        attr.width=(int)(metrics.widthPixels*1f);
+        attr.alpha=1f;
+        dialogWindow.setAttributes(attr);
+        final LinearLayout header = root.findViewById(R.id.MyTableHeader);
+        final LinearLayout tableBody=root.findViewById(R.id.MyTable);
+        if (obj instanceof PurchaseOrder)
+        loadChoiceDialogItems(context,dialogChoose,header,tableBody,(PurchaseOrder)obj,null);
+        else loadPurChoiceDialogItems(context,dialogChoose,header,tableBody,(Goods)obj,null);
+        //查询
+        final EditText et=root.findViewById(R.id.text_search);
+        (root.findViewById(R.id.btn_search)).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                final String word = et.getText().toString().replaceAll(" ", "");
+                et.setText(word);et.setSelection(word.length());
+                header.removeAllViews();
+                tableBody.removeAllViews();
+                if (obj instanceof PurchaseOrder)
+                loadChoiceDialogItems(context,dialogChoose,header,tableBody,(PurchaseOrder)obj,word);
+                else loadPurChoiceDialogItems(context,dialogChoose,header,tableBody,(Goods)obj,word);
+            }
+        });
+    }
+
+    //获取商品多选框items的内容 & 默认选中的items
+    private ArrayList<ArrayList<String>> getChooseItemsAndDefaultSelectedList(String purId,String search){
+        CrudService service = new CrudService(getContext());
+        ArrayList<String> goodsNames = service.getGoodsNameListByPurOrderId(purId);
+        ArrayList<String> allNameList = service.getDistinctGoodsNameList(search);
+        service.close();
+        if (goodsNames==null)goodsNames=new ArrayList<>();
+        ArrayList<String> items = new ArrayList<>();
+        for ( int j=0;j<goodsNames.size();j++){
+            String item="["+(j+1)+"]      "+goodsNames.get(j);
+            items.add(item);
+        }
+        int i=0;
+        for (String name : allNameList){
+            if (goodsNames.contains(name))continue;
+            i++;
+            String item="["+(goodsNames.size()+i)+"]      "+ name;
+            items.add(item);
+        }
+        ArrayList<ArrayList<String>> list=new ArrayList<>();
+        list.add(items);
+        list.add(goodsNames);
+        return list;
+    }
+
+    //加载商品多选框的items & btn
+    private void loadChoiceDialogItems(final Context context,final Dialog dialogChoose,final LinearLayout header,final LinearLayout tableBody, final PurchaseOrder purchaseOrder,String word){
+        ArrayList<ArrayList<String>> itemList = getChooseItemsAndDefaultSelectedList(purchaseOrder.getId(),word);
+        final String[] items= itemList.get(0).toArray(new String[0]);
+        final ArrayList<String> defaultSelected = itemList.get(1);
+        final ArrayList<String> goodsNameChoices = new ArrayList<>();
+        for (int i=0;i<items.length;i++) {
+            if (defaultSelected.isEmpty()&&i==0){
+                TextView tv1 = new TextView(getContext());
+                String str="新增请勾选：";
+                if (defaultSelected.size()==items.length)str="\n         没有查询到相关商品";
+                tv1.setText(str);
+                tv1.setTextColor(Color.rgb(216,27,96));
+                tableBody.addView(tv1);
+            }
+            if (i==0&&defaultSelected.size()!=0){
+                try {
+                    TextView tv2 = new TextView(getContext());
+                    tv2.setText("已关联的：");
+                    tv2.setTextColor(Color.rgb(216,27,96));
+                    tableBody.addView(tv2);
+                    if (defaultSelected.size()<1){
+                        tv2.setText("           无");
+                        tv2.setTextColor(Color.BLACK);
+                        tableBody.addView(tv2);
+                    }
+                }catch (Exception e){
+                    Toast.makeText(getContext(),e.getMessage(),Toast.LENGTH_LONG).show();
+                }
+            }
+            String itemStr=items[i];
+            final CheckBox item = new CheckBox(context);
+            item.setText(itemStr);
+            final String goodsName = itemStr.substring(itemStr.lastIndexOf(" ")+1);
+            if (defaultSelected.contains(goodsName)){
+                goodsNameChoices.add(goodsName);
+                item.setChecked(true);}
+            item.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+                @Override
+                public void onCheckedChanged(CompoundButton compoundButton, boolean isChecked) {
+                    if (isChecked) {
+                        goodsNameChoices.add(goodsName);
+                    } else {
+                        goodsNameChoices.remove(goodsName);
+                    }
                 }
             });
-            purListView.addView(row);
+            tableBody.addView(item);
+            if (i==defaultSelected.size()-1){
+                LinearLayout v = new LinearLayout(context);
+                v.setMinimumHeight(2);
+                WindowManager.LayoutParams attr = dialogChoose.getWindow().getAttributes();
+                v.setMinimumWidth((int)(attr.width*0.91f));
+                v.setBackgroundColor(Color.BLACK);
+                tableBody.addView(v);
+                TextView tv = new TextView(getContext());
+                String str="新增请勾选：";
+                if (defaultSelected.size()==items.length)str="\n         没有查询到相关商品";
+                tv.setText(str);
+                tv.setTextColor(Color.rgb(216,27,96));
+                tableBody.addView(tv);
+            }
         }
-        asynchronousLoadPurImgs(context,purListView,purOrderList);
+        header.setOrientation(LinearLayout.HORIZONTAL);
+        header.setGravity(Gravity.END);
+        header.setPadding(0, 1, 15, 1);
+        TextView textV = new TextView(context);
+        textV.setText("请勾选要关联的商品并点击提交    ");
+        header.addView(textV);
+        Button button = new Button(context);
+        button.setText("提交");
+        button.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if (!goodsNameChoices.equals(defaultSelected)){
+                    CrudService service = new CrudService(context);
+                    String msg="关联失败！";
+                    if (service.bindingGoods2PurOrder(goodsNameChoices,purchaseOrder.getId())) {
+                        msg="关联成功！";
+                    }
+                    service.close();
+                    Toast.makeText(context,msg,Toast.LENGTH_SHORT).show();
+                }
+                dialogChoose.dismiss();
+            }
+        });
+        header.addView(button);
+    }
+
+    //加载进货单多选框的items & CheckBox
+    private void loadPurChoiceDialogItems(final Context context,final Dialog dialog,final LinearLayout header,final LinearLayout tableBody,final Goods goods,String word){
+        CrudService service = new CrudService(context);
+        final ArrayList<PurchaseOrder> defaultSelected = service.getPurOrderListByGoodsId(goods.getId());
+        final ArrayList<PurchaseOrder> purOrderList = service.findPurOrderByWord(word);service.close();
+        purListSortByTime(purOrderList);
+        boolean isEmpty=purOrderList.isEmpty();
+        final ArrayList<PurchaseOrder> purChoices=new ArrayList<>();
+        if (defaultSelected.size()>0){
+            TextView t = new TextView(context);
+            t.setText("已关联的：");
+            t.setTextColor(Color.rgb(216,27,96));
+            tableBody.addView(t);
+            for (int i = 0; i < defaultSelected.size(); i++) {
+                final PurchaseOrder pur = defaultSelected.get(i);
+                purOrderList.remove(pur);purOrderList.add(i,pur);
+                final LinearLayout row = (LinearLayout) LayoutInflater.from(context).inflate(R.layout.pur_item_choice, null);
+                ((TextView) row.findViewById(R.id.pur_supplier_item)).setText(pur.getSupplier());
+                ((TextView) row.findViewById(R.id.pur_date_item)).setText(pur.getDate());
+                row.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View view) {
+                        fullScreenShowPurOrder(pur);
+                    }
+                });
+                CheckBox checkBox = row.findViewById(R.id.pur_item_checkBox);
+                checkBox.setChecked(true);
+                purChoices.add(pur);
+                checkBox.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+                    @Override
+                    public void onCheckedChanged(CompoundButton compoundButton, boolean isChecked) {
+                        if (isChecked) {
+                            purChoices.add(pur);
+                        } else {
+                            purChoices.remove(pur);
+                        }
+                    }
+                });
+                tableBody.addView(row);
+            }
+            purOrderList.add(0,null);
+        }
+        if (isEmpty){
+            LinearLayout v = new LinearLayout(context);
+            v.setMinimumHeight(15);
+            WindowManager.LayoutParams attr = dialog.getWindow().getAttributes();
+            v.setMinimumWidth((int)(attr.width*0.91f));
+            v.setBackgroundResource(R.drawable.edit_background);
+            tableBody.addView(v);
+            TextView t2 = new TextView(context);
+            t2.setText("\n         没有查询到相关进货单");
+            tableBody.addView(t2);
+        }
+        else{
+            TextView tv = new TextView(context);
+            tv.setText("新增请勾选：");
+            tv.setTextColor(Color.rgb(216,27,96));
+            tableBody.addView(tv);
+            purOrderList.add(defaultSelected.isEmpty()?0:defaultSelected.size()+1,null);
+            for(final PurchaseOrder pur:purOrderList){
+                if (pur==null)continue;
+                if (defaultSelected.contains(pur))continue;
+                final LinearLayout row=(LinearLayout) LayoutInflater.from(context).inflate(R.layout.pur_item_choice,null);
+                ((TextView)row.findViewById(R.id.pur_supplier_item)).setText(pur.getSupplier());
+                ((TextView)row.findViewById(R.id.pur_date_item)).setText(pur.getDate());
+                row.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View view) {
+                        fullScreenShowPurOrder(pur);
+                    }
+                });
+                CheckBox checkBox = row.findViewById(R.id.pur_item_checkBox);
+                checkBox.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+                    @Override
+                    public void onCheckedChanged(CompoundButton compoundButton, boolean isChecked) {
+                        if (isChecked) {
+                            purChoices.add(pur);
+                        } else {
+                            purChoices.remove(pur);
+                        }
+                    }
+                });
+                tableBody.addView(row);
+            }
+        }
+        header.setOrientation(LinearLayout.HORIZONTAL);
+        header.setGravity(Gravity.END);
+        header.setPadding(0, 1, 15, 1);
+        TextView textV = new TextView(context);
+        textV.setText("请勾选要关联的商品并点击提交    ");
+        header.addView(textV);
+        Button button = new Button(context);
+        button.setText("提交");
+        button.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if (!purChoices.equals(defaultSelected)){
+                    CrudService service = new CrudService(context);
+                    String msg="关联失败！";
+                    if (service.bindingPurOrder2Goods(purChoices,goods.getId())) {
+                        msg="关联成功！";
+                    }
+                    service.close();
+                    Toast.makeText(context,msg,Toast.LENGTH_SHORT).show();
+                }
+                dialog.dismiss();
+            }
+        });
+        header.addView(button);
+        asynchronousLoadPurImgs(context,tableBody,purOrderList);
     }
 }
