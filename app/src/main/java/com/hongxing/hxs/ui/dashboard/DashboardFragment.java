@@ -49,18 +49,24 @@ import com.hongxing.hxs.R;
 import com.hongxing.hxs.entity.Goods;
 import com.hongxing.hxs.entity.PurchaseOrder;
 import com.hongxing.hxs.service.CrudService;
+import com.hongxing.hxs.utils.CommonUtils;
 import com.hongxing.hxs.utils.GoodsUtils;
 import com.hongxing.hxs.utils.StatusCode;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.text.Collator;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 
@@ -141,7 +147,7 @@ public class DashboardFragment extends Fragment {
             final Context context = getContext();
             View view= LayoutInflater.from(context).inflate(R.layout.suretoadd_purorder_page, null);
             final Bitmap bitmap_orig = BitmapFactory.decodeFile(MainActivity.showPIC.getPath());
-            final Bitmap bitmap_comp=MainActivity.centerSquareScaleBitmap(bitmap_orig, 200,getResources().getDisplayMetrics().density);
+            final Bitmap bitmap_comp=MainActivity.centerSquareScaleBitmap(bitmap_orig, 150,getResources().getDisplayMetrics().density);
             ImageView imgView=view.findViewById(R.id.img_addingPurOrder);
             imgView.setImageBitmap(bitmap_comp);
             AlertDialog.Builder builder= new AlertDialog.Builder(context);
@@ -179,12 +185,12 @@ public class DashboardFragment extends Fragment {
                 public void onClick(View view) {
                     String strDate = addPurOrder_date.getText().toString();
                     if ("请选择".equals(strDate)){
-                        Toast.makeText(context,"请先填入进货单的日期！",Toast.LENGTH_SHORT).show();
+                        Toast.makeText(context,"请先选择进货单的日期！",Toast.LENGTH_SHORT).show();
                         return;
                     }
                     String supplier =addPurOrder_supplier.getText().toString().replaceAll(" ","");
                     if (supplier.length()<1)supplier="未填写";
-                    sureToAdd_purOrder(context,strDate,supplier);
+                    sureToAdd_purOrder(context,strDate,supplier,bitmap_comp);
                     dialog.dismiss();
                 }
             });
@@ -530,6 +536,14 @@ public class DashboardFragment extends Fragment {
     //异步加载进货单图片
     private void asynchronousLoadPurImgs(Context context, final LinearLayout table, final ArrayList<PurchaseOrder> purOrderList){
         final float density = context.getResources().getDisplayMetrics().density;
+        final String cachePath = CommonUtils.getDiskCachePath(context);
+        File[] files = new File(cachePath).listFiles();
+        final ArrayList<String> cacheList=new ArrayList<>();
+        if (files!=null){
+            for (File file : files) {
+                cacheList.add(file.getAbsolutePath());
+            }
+        }
         compImgs.clear();
         new Thread(){
             @Override
@@ -537,12 +551,25 @@ public class DashboardFragment extends Fragment {
                 for (int i = 0; i < purOrderList.size(); i++) {
                     PurchaseOrder pur = purOrderList.get(i);
                     if (pur==null){compImgs.add(null);continue;}
-                    Bitmap temp = BitmapFactory.decodeFile(pur.getDataUri());
-                    final Bitmap bitmap = MainActivity.centerSquareScaleBitmap(temp, 180, density);
+                    String imgPath = cachePath+File.separator+pur.getId().replaceAll("-","") + ".jpg";
+                    Bitmap bitmap;
+                    if (cacheList.contains(imgPath)){
+                        bitmap=BitmapFactory.decodeFile(imgPath);
+                    }else{
+                        Bitmap temp = BitmapFactory.decodeFile(pur.getDataUri());
+                        bitmap = MainActivity.centerSquareScaleBitmap(temp, 150, density);
+                        File file = new File(imgPath);
+                        try {
+                            file.createNewFile();
+                            FileOutputStream fos = new FileOutputStream(file);
+                            bitmap.compress(Bitmap.CompressFormat.JPEG,20,fos);
+                            fos.flush();
+                            fos.close();
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    }
                     compImgs.add(bitmap);
-//                    ByteArrayOutputStream baos = new ByteArrayOutputStream();
-//                    bitmap.compress(Bitmap.CompressFormat.JPEG, 100, baos);
-//                    byte[] data = baos.toByteArray();
                     Bundle bundle = new Bundle();
                     bundle.putInt("index",i);
                     Message msg = new Message();
@@ -550,7 +577,7 @@ public class DashboardFragment extends Fragment {
                     msg.obj=table;
                     msg.setData(bundle);
                     uiHandler.sendMessage(msg);
-                }// TODO: 2020/10/29 使用缓存略缩图，不用每次都这样加载
+                }
                 uiHandler.sendEmptyMessage(0x08);
             }
         }.start();
@@ -716,7 +743,7 @@ public class DashboardFragment extends Fragment {
     }
 
     //确定添加进货单
-    private void sureToAdd_purOrder(Context context, String strDate, String supplier){
+    private void sureToAdd_purOrder(Context context, String strDate, String supplier,Bitmap compBitmap){
         PurchaseOrder purchaseOrder = new PurchaseOrder(UUID.randomUUID().toString(),supplier,strDate,MainActivity.showPIC.getPath());
         CrudService service = new CrudService(context);
         service.savePurchaseOrder(MainActivity.goods.getId(),purchaseOrder);
@@ -726,6 +753,17 @@ public class DashboardFragment extends Fragment {
         ((TextView) row.findViewById(R.id.pur_date_item)).setText(strDate);
         setPurItemOnClickEvent(context,row,purchaseOrder,purListView.getChildCount(),StatusCode.IN_PURLIST_VIEW);
         purListView.addView(row);
+        String imgPath=CommonUtils.getDiskCachePath(context)+File.separator+purchaseOrder.getId().replaceAll("-","")+".jpg";
+        File file = new File(imgPath);
+        try {
+            file.createNewFile();
+            FileOutputStream fos = new FileOutputStream(file);
+            compBitmap.compress(Bitmap.CompressFormat.JPEG,20,fos);
+            fos.flush();
+            fos.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
         Toast.makeText(context,"进货单添加成功！",Toast.LENGTH_SHORT).show();
     }
 
@@ -955,7 +993,9 @@ public class DashboardFragment extends Fragment {
         final Dialog dialogChoose= builder.create();
         dialogChoose.show();
         final View root= LayoutInflater.from(context).inflate(R.layout.fragment_dashboard, null);
-        ((EditText)root.findViewById(R.id.text_search)).setWidth((int)(root.getWidth()*.5));
+        EditText searchBox = root.findViewById(R.id.text_search);
+        searchBox.setHint("输入供货商名称");
+        (searchBox).setWidth((int)(root.getWidth()*.7));
         root.findViewById(R.id.btn_add).setAlpha(0f);
         root.findViewById(R.id.btn_add).setEnabled(false);
         root.findViewById(R.id.btn_jumpPage).setAlpha(0f);
@@ -1113,6 +1153,7 @@ public class DashboardFragment extends Fragment {
         final ArrayList<PurchaseOrder> purOrderList = service.findPurOrderByWord(word);service.close();
         purListSortByTime(purOrderList);
         boolean isEmpty=purOrderList.isEmpty();
+        boolean sizeEqual=defaultSelected.size()==purOrderList.size();
         final ArrayList<PurchaseOrder> purChoices=new ArrayList<>();
         if (defaultSelected.size()>0){
             TextView t = new TextView(context);
@@ -1159,7 +1200,7 @@ public class DashboardFragment extends Fragment {
             t2.setText("\n         没有查询到相关进货单");
             tableBody.addView(t2);
         }
-        else{
+        else if (!sizeEqual){
             TextView tv = new TextView(context);
             tv.setText("新增请勾选：");
             tv.setTextColor(Color.rgb(216,27,96));
