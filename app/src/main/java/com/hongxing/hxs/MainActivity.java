@@ -4,9 +4,6 @@ import android.Manifest;
 import android.app.AlertDialog;
 import android.app.DatePickerDialog;
 import android.app.Dialog;
-import android.app.ProgressDialog;
-import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
@@ -14,8 +11,6 @@ import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Environment;
-import android.os.Handler;
 import android.provider.MediaStore;
 import android.text.TextUtils;
 import android.view.KeyEvent;
@@ -39,6 +34,7 @@ import com.hongxing.hxs.entity.Goods;
 import com.hongxing.hxs.entity.PurchaseOrder;
 import com.hongxing.hxs.other.MyViewBinder;
 import com.hongxing.hxs.service.CrudService;
+import com.hongxing.hxs.utils.CommonUtils;
 import com.hongxing.hxs.utils.GoodsUtils;
 import com.hongxing.hxs.utils.StatusCode;
 import com.huawei.hms.hmsscankit.ScanUtil;
@@ -72,10 +68,8 @@ public class MainActivity extends AppCompatActivity {
     private static boolean isQuit = false;
     private Timer timer = new Timer();
     public static Goods goods;
-    private View nowTopLayerView;
     private ListView listView_PurOrderBody=null;
     private List<Map<String,Object>> lists=null;
-    private SimpleAdapter adapter=null;
     public static File showPIC=null;
     public static String APPStoragePath;
 
@@ -92,7 +86,7 @@ public class MainActivity extends AppCompatActivity {
         NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment);
         NavigationUI.setupActionBarWithNavController(this, navController, appBarConfiguration);
         NavigationUI.setupWithNavController(navView, navController);
-        APPStoragePath=getExternalFilesDir(null).getPath();
+        APPStoragePath= CommonUtils.getAPPStoragePath(getApplicationContext());
         DBManager.openDatabase(this).close();
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             this.requestPermissions(
@@ -219,8 +213,8 @@ public class MainActivity extends AppCompatActivity {
         lists.add(map);
         if (listView_PurOrderBody!=null){
 //            ((TextView)nowTopLayerView.findViewById(R.id.notFoundWord)).setTextSize(0);
-            adapter = new SimpleAdapter(this, lists, R.layout.list_item,
-                    new String[]{"compImg","supplier","date"}, new int[]{R.id.pur_img_item,R.id.pur_supplier_item,R.id.pur_date_item});
+            SimpleAdapter adapter = new SimpleAdapter(this, lists, R.layout.list_item,
+                    new String[]{"compImg", "supplier", "date"}, new int[]{R.id.pur_img_item, R.id.pur_supplier_item, R.id.pur_date_item});
             adapter.setViewBinder(new MyViewBinder());
             listView_PurOrderBody.setAdapter(adapter);
         }
