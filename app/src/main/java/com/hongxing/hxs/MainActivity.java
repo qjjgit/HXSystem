@@ -34,6 +34,7 @@ import com.hongxing.hxs.entity.Goods;
 import com.hongxing.hxs.entity.PurchaseOrder;
 import com.hongxing.hxs.other.MyViewBinder;
 import com.hongxing.hxs.service.CrudService;
+import com.hongxing.hxs.ui.dashboard.DashboardFragment;
 import com.hongxing.hxs.utils.CommonUtils;
 import com.hongxing.hxs.utils.GoodsUtils;
 import com.hongxing.hxs.utils.StatusCode;
@@ -122,12 +123,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         //receive result after your activity finished scanning
         super.onActivityResult(requestCode, resultCode, data);
-        if (resultCode != RESULT_OK ) {
-            if (requestCode==StatusCode.REQUEST_CODE_SHOOT){
-                showPIC.delete();
-            }
-            return;
-        }
+        if (resultCode != RESULT_OK ) {return;}
         // Obtain the return value of HmsScan from the value returned by the onActivityResult method by using ScanUtil.RESULT as the key value.
         if (requestCode == REQUEST_CODE_SCAN) {
             Object obj = data.getParcelableExtra(ScanUtil.RESULT);
@@ -135,7 +131,6 @@ public class MainActivity extends AppCompatActivity {
                 String barcode = ((HmsScan) obj).getOriginalValue();
                 if (!TextUtils.isEmpty(barcode)) {
                     if(barcode.length()==13){
-//                        Toast.makeText(this, resultText, Toast.LENGTH_SHORT).show();
                         setThisGoodsByBarcode(barcode);
                     }else{
                         Toast.makeText(this, "请扫描商品条码！", Toast.LENGTH_SHORT).show();
@@ -143,82 +138,6 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         }
-
-        //拍照 进货单结果
-        if (requestCode == StatusCode.REQUEST_CODE_SHOOT){
-            View view= LayoutInflater.from(this).inflate(R.layout.suretoadd_purorder_page, null);
-            final Bitmap bitmap_orig = BitmapFactory.decodeFile(showPIC.getPath());
-            final Bitmap bitmap_comp=centerSquareScaleBitmap(bitmap_orig, 200,getResources().getDisplayMetrics().density);
-            ImageView imgView=view.findViewById(R.id.img_addingPurOrder);
-            imgView.setImageBitmap(bitmap_comp);
-            AlertDialog.Builder builder= new AlertDialog.Builder(this);
-            final Dialog dialog= builder.create();
-            dialog.show();
-            dialog.getWindow().setContentView(view);
-            dialog.getWindow().clearFlags(WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM);
-            dialog.setCancelable(false);
-            (view.findViewById(R.id.addPurOrder_cancel)).setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View view) {
-                    dialog.dismiss();
-                    showPIC.delete();
-                }
-            });
-            final Button addPurOrder_date= view.findViewById(R.id.addPurOrder_date);
-            addPurOrder_date.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View view) {
-                    DatePickerDialog datePickerDialog = new DatePickerDialog(MainActivity.this, DatePickerDialog.THEME_HOLO_LIGHT);
-                    datePickerDialog.getDatePicker().setMaxDate(new Date().getTime());
-                    datePickerDialog.setOnDateSetListener(new DatePickerDialog.OnDateSetListener() {
-                        @Override
-                        public void onDateSet(DatePicker datePicker, int year, int month, int day) {
-                            addPurOrder_date.setText(year +"-"+(month+1)+"-"+day);
-                        }
-                    });
-                    datePickerDialog.show();
-                }
-            });
-            final EditText addPurOrder_supplier= view.findViewById(R.id.addPurOrder_supplier);
-            (view.findViewById(R.id.addPurOrder_ok)).setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View view) {
-                    String strDate = addPurOrder_date.getText().toString();
-                    if ("请选择".equals(strDate)){
-                        Toast.makeText(getApplicationContext(),"请先填入进货单的日期！",Toast.LENGTH_SHORT).show();
-                        return;
-                    }
-                    String supplier =addPurOrder_supplier.getText().toString().replaceAll(" ","");
-                    if (supplier.length()<1)supplier="未填写";
-                    sureToAdd_purOrder(bitmap_comp,strDate,supplier);
-                    dialog.dismiss();
-                }
-            });
-        }
-    }
-    //确认添加进货单
-    public void sureToAdd_purOrder(Bitmap bitmap_comp,String strDate,String supplier){
-        PurchaseOrder purchaseOrder = new PurchaseOrder(UUID.randomUUID().toString(),supplier,strDate,showPIC.getPath());
-        CrudService service = new CrudService(getApplicationContext());
-        service.savePurchaseOrder(goods.getId(),purchaseOrder);
-        service.close();
-        Map<String, Object> map = new HashMap<>();
-        map.put("origImgUri",showPIC.getPath());
-        map.put("compImg",bitmap_comp);
-        map.put("supplier",purchaseOrder.getSupplier());
-        map.put("date",purchaseOrder.getDate());
-        if (lists==null){
-            lists=new ArrayList<>();
-        }
-        lists.add(map);
-        if (listView_PurOrderBody!=null){
-//            ((TextView)nowTopLayerView.findViewById(R.id.notFoundWord)).setTextSize(0);
-            SimpleAdapter adapter = new SimpleAdapter(this, lists, R.layout.list_item,
-                    new String[]{"compImg", "supplier", "date"}, new int[]{R.id.pur_img_item, R.id.pur_supplier_item, R.id.pur_date_item});
-            adapter.setViewBinder(new MyViewBinder());
-            listView_PurOrderBody.setAdapter(adapter);
-        }
-        Toast.makeText(getApplicationContext(),"进货单添加成功！",Toast.LENGTH_SHORT).show();
     }
 
     //通过barcode设置当前goods属性
@@ -292,7 +211,6 @@ public class MainActivity extends AppCompatActivity {
                 String item = spinner_unit.getSelectedItem().toString();
                 goods.setUnit(item);
             }
-
             @Override
             public void onNothingSelected(AdapterView<?> adapterView) {
 //                System.out.println("没有选择单位，已设为默认值“个”");
@@ -323,114 +241,11 @@ public class MainActivity extends AppCompatActivity {
     }
 
     //进货单列表页面  by click
-//    public void showPurchaseOrderPage(View view){
-//        final Context context = this;
-//        View root= LayoutInflater.from(context).inflate(R.layout.purchaseorder_page, null);
-//        nowTopLayerView=root;
-//        AlertDialog.Builder builder= new AlertDialog.Builder(context,R.style.Dialog_Fullscreen);
-//        final Dialog dialog= builder.create();
-//        dialog.show();
-//        dialog.getWindow().setContentView(root);
-//        dialog.setOnKeyListener(new DialogInterface.OnKeyListener() {
-//            @Override
-//            public boolean onKey(DialogInterface dialog, int keyCode, KeyEvent event) {
-//                if (keyCode== KeyEvent.KEYCODE_BACK&&event.getAction()==KeyEvent.ACTION_UP){
-//                    lists.clear();
-//                    dialog.dismiss();
-//                }
-//                return true;
-//            }
-//        });
-//        if (lists==null)
-//            lists=new ArrayList<>();
-//        else lists.clear();
-//        listView_PurOrderBody=root.findViewById(R.id.list_purOrder);
-//        listView_PurOrderBody.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-//            @Override
-//            public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
-//                Context context = view.getContext();
-//                View root= LayoutInflater.from(context).inflate(R.layout.show_bitmap_full, null);
-//                AlertDialog.Builder builder= new AlertDialog.Builder(context,R.style.Dialog_Fullscreen);
-//                final Dialog dialog= builder.create();
-//                dialog.show();
-//                dialog.getWindow().setContentView(root);
-//                ImageView imgV=root.findViewById(R.id.img_fullscreen);
-//                if (new File((String)lists.get(i).get("origImgUri")).exists()){
-//                    String uri=(String) lists.get(i).get("origImgUri");
-//                    Bitmap bitmap = BitmapFactory.decodeFile(uri);
-//                    imgV.setImageBitmap(bitmap);
-//                    imgV.setScaleType(ImageView.ScaleType.FIT_CENTER);
-//                }else imgV.setImageResource(R.mipmap.ic_launcher);
-////                    imgV.setOnClickListener(new View.OnClickListener(){
-////                        @Override
-////                        public void onClick(View v){
-////                            dialog.dismiss();
-////                        }
-////                    });
-//            }
-//        });
-//        CrudService service = new CrudService(context);
-//        final ArrayList<PurchaseOrder> purOrderList = service.getPurOrderListByGoodsId(goods.getId());
-//        service.close();
-//        TextView textV_notFound=root.findViewById(R.id.notFoundWord);
-//        if (purOrderList.size()<1){
-//            textV_notFound.setTextSize(24);
-//            return;
-//        }
-//        final ProgressDialog progressDialog = new ProgressDialog(context);
-//        progressDialog.setProgress(0);
-//        progressDialog.setMessage("加载中...");
-//        progressDialog.setIndeterminate(true);
-//        progressDialog.setCancelable(false);
-//        progressDialog.setMax(10);
-//        progressDialog.show();
-//        final Handler handler = new Handler();
-//        final Thread thread = new Thread(){
-//            public void run() {
-//                boolean post = handler.post(new Runnable() {
-//                    @Override
-//                    public void run() {
-//                        for (PurchaseOrder po : purOrderList) {
-//                            Map<String,Object> map=new HashMap<>();
-//                            String imgUri = po.getDataUri();
-//                            map.put("origImgUri",imgUri);
-//                            Bitmap bitmap = BitmapFactory.decodeFile(imgUri);
-//                            bitmap=centerSquareScaleBitmap(bitmap,100,getResources().getDisplayMetrics().density);
-//                            map.put("compImg",bitmap);
-//                            map.put("supplier",po.getSupplier());
-//                            map.put("date",po.getDate());
-//                            lists.add(map);
-//                        }
-//                        adapter = new SimpleAdapter(MainActivity.this, lists, R.layout.list_item,
-//                                new String[]{"compImg","supplier","date"}, new int[]{R.id.pur_img_item,R.id.pur_supplier_item,R.id.pur_date_item});
-//                        adapter.setViewBinder(new MyViewBinder());
-//                        listView_PurOrderBody.setAdapter(adapter);
-//                    }
-//                });
-//                if (post){
-//                    try {
-//                        sleep(500);
-//                    } catch (InterruptedException e) {
-//                        e.printStackTrace();
-//                    }
-//                    progressDialog.setProgress(10);
-//                    progressDialog.cancel();
-//                }
-//            }
-//        };
-//        thread.start();
-//    }
-
-    //添加进货单  by click
-    public void addPurOrderPage(View view) {// TODO: 2020/10/24 转移
-        Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);//设置动作为调用照相机
-        File file = createPhotoFile();
-        if (file!=null){
-            showPIC=file;
-            Uri imgUri= FileProvider.getUriForFile(this,getPackageName()+".fileprovider", file);
-            intent.putExtra(MediaStore.EXTRA_OUTPUT,imgUri);//指定系统相机拍照保存在imageFileUri所指的位置
+    public void showPurchaseOrderPage(View view){
+        if (goods==null){
+            Toast.makeText(this,"发生了错误!",Toast.LENGTH_SHORT).show();return;
         }
-        startActivityForResult(intent,StatusCode.REQUEST_CODE_SHOOT);
+        new DashboardFragment(this).showPurchaseOrderPage(this);
     }
 
     //创建进货单图像文件

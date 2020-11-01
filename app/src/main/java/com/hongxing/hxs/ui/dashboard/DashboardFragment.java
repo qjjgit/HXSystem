@@ -86,6 +86,13 @@ public class DashboardFragment extends Fragment {
     private ProgressDialog progressDialog;
     private String nowSearchWord;
     private String[] lastSort=null;
+    private Context mContext;
+
+    public DashboardFragment() {}
+    public DashboardFragment(Context context) {
+        mContext=context;
+        initSomething();
+    }
 
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container, Bundle savedInstanceState) {
@@ -127,6 +134,7 @@ public class DashboardFragment extends Fragment {
                 AsynchronousLoading();
             }
             });
+            initSomething();
             AsynchronousLoading();
             }
         });
@@ -198,46 +206,49 @@ public class DashboardFragment extends Fragment {
     }
 
     @SuppressLint("HandlerLeak")
-    private void AsynchronousLoading(){
+    private void initSomething(){
         if (progressDialog==null) {
-            progressDialog = new ProgressDialog(getContext());
+            progressDialog = new ProgressDialog(mContext==null?getContext():mContext);
             progressDialog.setMessage("加载中...");
             progressDialog.setIndeterminate(true);
             progressDialog.setCancelable(false);
         }
-        progressDialog.show();
         if (uiHandler==null)
-        uiHandler=new Handler(){
-            @Override
-            public void handleMessage(@NonNull Message msg) {
-                super.handleMessage(msg);
-                LinearLayout table = (LinearLayout) msg.obj;
-                switch (msg.what){
-                    case 0x03:{
-                        if (nowListPage==0x00)
-                        initTableHeader();
-                        loadData();
-                        break;
-                    }
-                    case 0x07:{
-                        Bundle data = msg.getData();
-                        int index = data.getInt("index");
-                        Bitmap bitmap = compImgs.get(index);
-                        try {
-                            ((ImageView)table.getChildAt(index).findViewById(R.id.pur_img_item)).setImageBitmap(bitmap);
-                        }catch (Exception e){
-                            e.printStackTrace();
+            uiHandler=new Handler(){
+                @Override
+                public void handleMessage(@NonNull Message msg) {
+                    super.handleMessage(msg);
+                    LinearLayout table = (LinearLayout) msg.obj;
+                    switch (msg.what){
+                        case 0x03:{
+                            if (nowListPage==0x00)
+                                initTableHeader();
+                            loadData();
+                            break;
                         }
-                        break;
-                    }
-                    case 0x08:{
-                        if (progressDialog.isShowing()) {
-                            progressDialog.dismiss();
-                        }break;
+                        case 0x07:{
+                            Bundle data = msg.getData();
+                            int index = data.getInt("index");
+                            Bitmap bitmap = compImgs.get(index);
+                            try {
+                                ((ImageView)table.getChildAt(index).findViewById(R.id.pur_img_item)).setImageBitmap(bitmap);
+                            }catch (Exception e){
+                                e.printStackTrace();
+                            }
+                            break;
+                        }
+                        case 0x08:{
+                            if (progressDialog.isShowing()) {
+                                progressDialog.dismiss();
+                            }break;
+                        }
                     }
                 }
-            }
-        };
+            };
+    }
+
+    private void AsynchronousLoading(){
+        progressDialog.show();
         new Thread(){
             @Override
             public void run() {
@@ -257,12 +268,6 @@ public class DashboardFragment extends Fragment {
 //                    }
 //                });
 //                if (post){
-//                    try {
-//                        sleep(500);
-//                    } catch (InterruptedException e) {
-//                        e.printStackTrace();
-//                    }
-//                    progressDialog.setProgress(10);
 //                    progressDialog.cancel();
 //                }
 //            }
@@ -585,10 +590,11 @@ public class DashboardFragment extends Fragment {
 
     //显示商品信息
     synchronized private void showGoodsInfoPage(final int rowNumber){
-        AlertDialog.Builder builder= new AlertDialog.Builder(getContext());
+        final Context context = getContext();
+        AlertDialog.Builder builder= new AlertDialog.Builder(context);
         final Dialog dialog= builder.create();
         dialog.show();
-        View view= LayoutInflater.from(getContext()).inflate(R.layout.dialog_show_goodsinfo_page, null);
+        View view= LayoutInflater.from(context).inflate(R.layout.dialog_show_goodsinfo_page, null);
         dialog.getWindow().setContentView(view);
 //        dialog.setCancelable(false);
         final TextView cancel =view.findViewById(R.id.showGoods_cancel);
@@ -627,7 +633,7 @@ public class DashboardFragment extends Fragment {
         view.findViewById(R.id.showGoods_PurchaseOrder).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                showPurchaseOrderPage();
+                showPurchaseOrderPage(context);
             }
         });
         cancel.setOnClickListener(new View.OnClickListener() {
@@ -660,7 +666,7 @@ public class DashboardFragment extends Fragment {
                 map.put("unit",goodsCheck.getUnit());
                 map.put("price",price);
                 map.put("orig",orig);
-                boolean ok = GoodsUtils.checkGoodsInfoForAction(getContext(),goodsCheck,map,GoodsUtils.DO_UPDATE);
+                boolean ok = GoodsUtils.checkGoodsInfoForAction(context,goodsCheck,map,GoodsUtils.DO_UPDATE);
                 if (ok) {//表格实时更新数据显示
                     tableBodyList.get(rowNumber).get(0).setText(String.valueOf(rowNumber+1));
                     tableBodyList.get(rowNumber).get(1).setText(goodsCheck.getName());
@@ -676,7 +682,7 @@ public class DashboardFragment extends Fragment {
 
     //全屏显示进货单图片
     synchronized private void fullScreenShowPurOrder(PurchaseOrder purchaseOrder){
-        Context context = getContext();
+        Context context = mContext==null?getContext():mContext;
         AlertDialog.Builder builder= new AlertDialog.Builder(context,R.style.Dialog_Fullscreen);
         final Dialog dialog= builder.create();
         dialog.show();
@@ -690,9 +696,11 @@ public class DashboardFragment extends Fragment {
     }
 
     //查看进货单列表
-    private void showPurchaseOrderPage(){
-        final Context context = getContext();
-        View root= LayoutInflater.from(context).inflate(R.layout.purchaseorder_page, null);
+    public void showPurchaseOrderPage(final Context context){
+        View root;
+        try {
+            root= LayoutInflater.from(context).inflate(R.layout.purchaseorder_page, null);
+        }catch (Exception e){e.printStackTrace();return;}
         AlertDialog.Builder builder= new AlertDialog.Builder(context,R.style.Dialog_Fullscreen);
         final Dialog dialog= builder.create();
         dialog.show();

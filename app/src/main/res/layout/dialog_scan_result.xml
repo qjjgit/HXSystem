@@ -126,6 +126,7 @@
         android:layout_marginBottom="16dp"
         android:textSize="18sp"
         android:text="查看\n进货单"
+        android:onClick="showPurchaseOrderPage"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
