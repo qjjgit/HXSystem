@@ -2,49 +2,39 @@ package com.hongxing.hxs;
 
 import android.Manifest;
 import android.app.AlertDialog;
-import android.app.DatePickerDialog;
 import android.app.Dialog;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.content.res.Configuration;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-import android.provider.MediaStore;
 import android.text.TextUtils;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.AdapterView;
-import android.widget.Button;
-import android.widget.DatePicker;
 import android.widget.EditText;
-import android.widget.ImageView;
-import android.widget.ListView;
-import android.widget.SimpleAdapter;
 import android.widget.Spinner;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.hongxing.hxs.db.DBManager;
 import com.hongxing.hxs.entity.Goods;
-import com.hongxing.hxs.entity.PurchaseOrder;
-import com.hongxing.hxs.other.MyViewBinder;
 import com.hongxing.hxs.service.CrudService;
 import com.hongxing.hxs.ui.dashboard.DashboardFragment;
 import com.hongxing.hxs.utils.CommonUtils;
 import com.hongxing.hxs.utils.GoodsUtils;
-import com.hongxing.hxs.utils.StatusCode;
+import com.hongxing.hxs.utils.ToastUtil;
 import com.huawei.hms.hmsscankit.ScanUtil;
 import com.huawei.hms.ml.scan.HmsScan;
 import com.huawei.hms.ml.scan.HmsScanAnalyzerOptions;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.content.FileProvider;
 import androidx.navigation.NavController;
 import androidx.navigation.Navigation;
 import androidx.navigation.ui.AppBarConfiguration;
@@ -52,14 +42,9 @@ import androidx.navigation.ui.NavigationUI;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
-import java.util.UUID;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -69,10 +54,9 @@ public class MainActivity extends AppCompatActivity {
     private static boolean isQuit = false;
     private Timer timer = new Timer();
     public static Goods goods;
-    private ListView listView_PurOrderBody=null;
-    private List<Map<String,Object>> lists=null;
     public static File showPIC=null;
     public static String APPStoragePath;
+    private static Context appContext;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -87,6 +71,7 @@ public class MainActivity extends AppCompatActivity {
         NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment);
         NavigationUI.setupActionBarWithNavController(this, navController, appBarConfiguration);
         NavigationUI.setupWithNavController(navView, navController);
+        appContext=getApplicationContext();
         APPStoragePath= CommonUtils.getAPPStoragePath(getApplicationContext());
         DBManager.openDatabase(this).close();
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -98,6 +83,21 @@ public class MainActivity extends AppCompatActivity {
                     0X03);
         }
     }
+
+    @Override
+    public void onConfigurationChanged(@NonNull Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
+        if(newConfig.orientation==Configuration.ORIENTATION_LANDSCAPE){
+            System.out.println("当前屏幕为横屏");
+        }else{
+            System.out.println("当前屏幕为竖屏");
+        }
+    }
+
+    public static Context getMainContext(){
+        return appContext;
+    }
+
     /*开始扫码*/
     public void btnScanClick(View v){
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -133,7 +133,7 @@ public class MainActivity extends AppCompatActivity {
                     if(barcode.length()==13){
                         setThisGoodsByBarcode(barcode);
                     }else{
-                        Toast.makeText(this, "请扫描商品条码！", Toast.LENGTH_SHORT).show();
+                        ToastUtil.showShortToast("请扫描商品条码！");
                     }
                 }
             }
@@ -146,7 +146,7 @@ public class MainActivity extends AppCompatActivity {
         goods=service.findByBarcode(barcode);
         service.close();
         if(goods==null){
-            Toast.makeText(this, "没有录入与"+barcode+"对应的商品！", Toast.LENGTH_SHORT).show();
+            ToastUtil.showShortToast("没有录入与"+barcode+"对应的商品！");
             goods=new Goods();
             goods.setBarcode(barcode);
             showAddGoodsPage();
@@ -220,7 +220,6 @@ public class MainActivity extends AppCompatActivity {
         cancel.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-//                Toast.makeText(MainActivity.this, "您已取消添加", Toast.LENGTH_SHORT).show();
                 goods=null;
                 dialog.dismiss();
             }
@@ -243,7 +242,7 @@ public class MainActivity extends AppCompatActivity {
     //进货单列表页面  by click
     public void showPurchaseOrderPage(View view){
         if (goods==null){
-            Toast.makeText(this,"发生了错误!",Toast.LENGTH_SHORT).show();return;
+            ToastUtil.showShortToast("发生了错误!");return;
         }
         new DashboardFragment(this).showPurchaseOrderPage(this);
     }
@@ -259,9 +258,8 @@ public class MainActivity extends AppCompatActivity {
         try {
             image = File.createTempFile("IMG_",".jpg",stordir);
         } catch (IOException e) {
-            Toast.makeText(this,"createPhotoFile()异常\n"+e.getMessage(),Toast.LENGTH_LONG).show();
+            ToastUtil.showShortToast("createPhotoFile异常\n"+e.getMessage());
         }
-        //1：字首2：后缀3：在哪个目录下
         return  image;
     }
 
@@ -314,7 +312,7 @@ public class MainActivity extends AppCompatActivity {
         if (keyCode == KeyEvent.KEYCODE_BACK) {
             if (!isQuit) {
                 isQuit = true;
-                Toast.makeText(this, "再按一次返回键退出", Toast.LENGTH_SHORT).show();
+                ToastUtil.showShortToast("再按一次返回键退出");
                 TimerTask task = null;
                 task = new TimerTask() {
                     @Override

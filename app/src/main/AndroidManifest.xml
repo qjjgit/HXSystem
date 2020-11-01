@@ -20,11 +20,13 @@
         android:roundIcon="@mipmap/ic_launcher_my_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme"
-        android:requestLegacyExternalStorage="true">
+        android:requestLegacyExternalStorage="true"
+        tools:ignore="GoogleAppIndexingWarning">
         <activity
             android:name=".MainActivity"
             android:launchMode="standard"
-            android:label="鸿兴系统">
+            android:label="鸿兴系统"
+            android:configChanges="orientation|keyboardHidden|screenSize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

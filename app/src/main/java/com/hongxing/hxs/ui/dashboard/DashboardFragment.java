@@ -34,7 +34,6 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.Spinner;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.annotation.Nullable;
 import androidx.annotation.NonNull;
@@ -52,8 +51,8 @@ import com.hongxing.hxs.service.CrudService;
 import com.hongxing.hxs.utils.CommonUtils;
 import com.hongxing.hxs.utils.GoodsUtils;
 import com.hongxing.hxs.utils.StatusCode;
+import com.hongxing.hxs.utils.ToastUtil;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -61,12 +60,10 @@ import java.text.Collator;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 
@@ -193,7 +190,7 @@ public class DashboardFragment extends Fragment {
                 public void onClick(View view) {
                     String strDate = addPurOrder_date.getText().toString();
                     if ("请选择".equals(strDate)){
-                        Toast.makeText(context,"请先选择进货单的日期！",Toast.LENGTH_SHORT).show();
+                        ToastUtil.showShortToast("请先选择进货单的日期！");
                         return;
                     }
                     String supplier =addPurOrder_supplier.getText().toString().replaceAll(" ","");
@@ -329,7 +326,7 @@ public class DashboardFragment extends Fragment {
                     if(d1<d2)return 1;
                     if(d1>d2)return -1;
                 } catch (ParseException e) {
-                    Toast.makeText(getContext(),e.getMessage(),Toast.LENGTH_SHORT).show();
+                    ToastUtil.showShortToast(e.getMessage());
                 }
                 return 0;
             }
@@ -500,7 +497,7 @@ public class DashboardFragment extends Fragment {
     //查询
     private void doSearch(){
         if(nowSearchWord.length()==1){
-            Toast.makeText(getContext(),"至少输入2位字符进行搜索！",Toast.LENGTH_SHORT).show();
+            ToastUtil.showShortToast("至少输入2位字符进行搜索！");
             return;
         }
         if ("".equals(nowSearchWord)){
@@ -511,7 +508,7 @@ public class DashboardFragment extends Fragment {
             }else count =purOrderList.size()==service.getPurOrderCount();
             service.close();
             if(count){
-            Toast.makeText(getContext(),"请先输入关键词再进行搜索！",Toast.LENGTH_SHORT).show();
+                ToastUtil.showShortToast("请先输入关键词再进行搜索！");
             }else{
                 tableHeader.removeAllViews();
                 tableBody.removeAllViews();
@@ -531,11 +528,9 @@ public class DashboardFragment extends Fragment {
         CrudService service = new CrudService(context);
         service.updatePurOrder(purO);service.close();
         purOrderList.set(rowIndex,purO);
-//        ((TextView)tableBody.getChildAt(rowIndex).findViewById(R.id.pur_supplier_item)).setText(purO.getSupplier());
-//        ((TextView)tableBody.getChildAt(rowIndex).findViewById(R.id.pur_date_item)).setText(purO.getDate());
         tableBody.removeAllViews();
-        loadData();// TODO: 2020/10/23 看看卡不卡
-        Toast.makeText(context,"更新成功！",Toast.LENGTH_SHORT).show();
+        loadData();
+        ToastUtil.showShortToast("修改成功！");
     }
 
     //异步加载进货单图片
@@ -772,7 +767,7 @@ public class DashboardFragment extends Fragment {
         } catch (IOException e) {
             e.printStackTrace();
         }
-        Toast.makeText(context,"进货单添加成功！",Toast.LENGTH_SHORT).show();
+        ToastUtil.showShortToast("进货单添加成功！");
     }
 
     //给进货单item添加onClick事件
@@ -874,7 +869,7 @@ public class DashboardFragment extends Fragment {
                                                 msg="操作成功！";
                                                 purListView.removeView(row);
                                             }service.close();
-                                            Toast.makeText(context,msg,Toast.LENGTH_SHORT).show();
+                                            ToastUtil.showShortToast(msg);
                                         }
                                     });
                                     alterDiaglog.show();
@@ -974,7 +969,7 @@ public class DashboardFragment extends Fragment {
                                                 msg="删除成功！";
                                                 tableBody.removeView(row);
                                             }service.close();
-                                            Toast.makeText(context,msg,Toast.LENGTH_SHORT).show();
+                                            ToastUtil.showShortToast(msg);
                                         }
                                     });
                                     alterDiaglog.show();
@@ -1091,7 +1086,7 @@ public class DashboardFragment extends Fragment {
                         tableBody.addView(tv2);
                     }
                 }catch (Exception e){
-                    Toast.makeText(getContext(),e.getMessage(),Toast.LENGTH_LONG).show();
+                    ToastUtil.showLongToast(e.getMessage());
                 }
             }
             String itemStr=items[i];
@@ -1145,7 +1140,7 @@ public class DashboardFragment extends Fragment {
                         msg="关联成功！";
                     }
                     service.close();
-                    Toast.makeText(context,msg,Toast.LENGTH_SHORT).show();
+                    ToastUtil.showShortToast(msg);
                 }
                 dialogChoose.dismiss();
             }
@@ -1275,7 +1270,7 @@ public class DashboardFragment extends Fragment {
                         asynchronousLoadPurImgs(context,purListView,purChoices);}
                     }
                     service.close();
-                    Toast.makeText(context,msg,Toast.LENGTH_SHORT).show();
+                    ToastUtil.showShortToast(msg);
                 }
                 dialog.dismiss();
             }
