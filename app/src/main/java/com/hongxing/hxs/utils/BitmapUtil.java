@@ -68,16 +68,13 @@ public class BitmapUtil {
         if(null == bitmap || shorterEdgeLength <= 0){
             return null;
         }
-        System.out.println("shorterEdgeLength: "+shorterEdgeLength);
         int width = bitmap.getWidth();
         int height = bitmap.getHeight();
         Bitmap scaleBitmap = null;
         if(width > shorterEdgeLength && height > shorterEdgeLength){
             int longerEdge = (int)(shorterEdgeLength * Math.max(width, height) / Math.min(width, height));
             int scaleWidth = width > height ? longerEdge : shorterEdgeLength;
-            System.out.println("scaleWidth: "+scaleWidth);
             int scaleHeight = width > height ? shorterEdgeLength : longerEdge;
-            System.out.println("scaleHeight: "+scaleHeight);
             try{
                 scaleBitmap = Bitmap.createScaledBitmap(bitmap, scaleWidth, scaleHeight, true);
             }catch(Exception e){

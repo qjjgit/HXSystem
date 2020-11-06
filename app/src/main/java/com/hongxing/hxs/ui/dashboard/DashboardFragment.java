@@ -701,7 +701,7 @@ public class DashboardFragment extends Fragment {
                 if (check.isZoom())
                     imgV.setImageBitmap(bitmap);
                 else
-                    imgV.setImageBitmap(BitmapUtil.proportionalScaleBitmap(temp,(int)(metrics.widthPixels*1.5)));
+                    imgV.setImageBitmap(BitmapUtil.proportionalScaleBitmap(temp,(int)(metrics.widthPixels*1.65)));
                 check.setZoom(!check.isZoom());
             }
         }));

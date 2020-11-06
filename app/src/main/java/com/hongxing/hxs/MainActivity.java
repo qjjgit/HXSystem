@@ -238,13 +238,6 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    public void test(View view){
-        CrudService service = new CrudService(this);
-        String bar = ((EditText) findViewById(R.id.editText)).getText().toString();
-        goods = service.findByBarcode(bar);service.close();
-        showScanResultPage();
-    }
-
     //进货单列表页面  by click
     public void showPurchaseOrderPage(View view){
         if (goods==null){
