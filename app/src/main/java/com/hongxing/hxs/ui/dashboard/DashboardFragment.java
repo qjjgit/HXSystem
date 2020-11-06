@@ -48,8 +48,10 @@ import com.hongxing.hxs.R;
 import com.hongxing.hxs.entity.Goods;
 import com.hongxing.hxs.entity.PurchaseOrder;
 import com.hongxing.hxs.service.CrudService;
+import com.hongxing.hxs.utils.BitmapUtil;
 import com.hongxing.hxs.utils.CommonUtils;
 import com.hongxing.hxs.utils.GoodsUtils;
+import com.hongxing.hxs.utils.ScreenUtil;
 import com.hongxing.hxs.utils.StatusCode;
 import com.hongxing.hxs.utils.ToastUtil;
 
@@ -88,7 +90,7 @@ public class DashboardFragment extends Fragment {
     public DashboardFragment() {}
     public DashboardFragment(Context context) {
         mContext=context;
-        initSomething();
+        initSomething(null);
     }
 
     public View onCreateView(@NonNull LayoutInflater inflater,
@@ -96,11 +98,10 @@ public class DashboardFragment extends Fragment {
         dashboardViewModel =
                 ViewModelProviders.of(this).get(DashboardViewModel.class);
         final View root = inflater.inflate(R.layout.fragment_dashboard, container, false);
+        initSomething(root);
         dashboardViewModel.getText().observe(this, new Observer<String>() {
             @Override
             public void onChanged(@Nullable String s) {
-            tableHeader=root.findViewById(R.id.MyTableHeader);
-            tableBody=root.findViewById(R.id.MyTable);
             final EditText searchTextV = root.findViewById(R.id.text_search);
             (root.findViewById(R.id.btn_search)).setOnClickListener(new View.OnClickListener() {
                 @Override
@@ -131,7 +132,6 @@ public class DashboardFragment extends Fragment {
                 AsynchronousLoading();
             }
             });
-            initSomething();
             AsynchronousLoading();
             }
         });
@@ -152,7 +152,7 @@ public class DashboardFragment extends Fragment {
             final Context context = getContext();
             View view= LayoutInflater.from(context).inflate(R.layout.suretoadd_purorder_page, null);
             final Bitmap bitmap_orig = BitmapFactory.decodeFile(MainActivity.showPIC.getPath());
-            final Bitmap bitmap_comp=MainActivity.centerSquareScaleBitmap(bitmap_orig, 150,getResources().getDisplayMetrics().density);
+            final Bitmap bitmap_comp=BitmapUtil.centerSquareScaleBitmap(bitmap_orig,150);
             ImageView imgView=view.findViewById(R.id.img_addingPurOrder);
             imgView.setImageBitmap(bitmap_comp);
             AlertDialog.Builder builder= new AlertDialog.Builder(context);
@@ -203,7 +203,11 @@ public class DashboardFragment extends Fragment {
     }
 
     @SuppressLint("HandlerLeak")
-    private void initSomething(){
+    private void initSomething(View root){
+        if (root!=null){
+            tableHeader=root.findViewById(R.id.MyTableHeader);
+            tableBody=root.findViewById(R.id.MyTable);
+        }
         if (progressDialog==null) {
             progressDialog = new ProgressDialog(mContext==null?getContext():mContext);
             progressDialog.setMessage("加载中...");
@@ -535,7 +539,6 @@ public class DashboardFragment extends Fragment {
 
     //异步加载进货单图片
     private void asynchronousLoadPurImgs(Context context, final LinearLayout table, final ArrayList<PurchaseOrder> purOrderList){
-        final float density = context.getResources().getDisplayMetrics().density;
         final String cachePath = CommonUtils.getDiskCachePath(context);
         File[] files = new File(cachePath).listFiles();
         final ArrayList<String> cacheList=new ArrayList<>();
@@ -557,7 +560,7 @@ public class DashboardFragment extends Fragment {
                         bitmap=BitmapFactory.decodeFile(imgPath);
                     }else{
                         Bitmap temp = BitmapFactory.decodeFile(pur.getDataUri());
-                        bitmap = MainActivity.centerSquareScaleBitmap(temp, 150, density);
+                        bitmap= BitmapUtil.centerSquareScaleBitmap(temp,150);
                         File file = new File(imgPath);
                         try {
                             file.createNewFile();
@@ -676,18 +679,32 @@ public class DashboardFragment extends Fragment {
     }
 
     //全屏显示进货单图片
+    @SuppressLint("ClickableViewAccessibility")
     synchronized private void fullScreenShowPurOrder(PurchaseOrder purchaseOrder){
-        Context context = mContext==null?getContext():mContext;
+        final Context context = mContext==null?getContext():mContext;
         AlertDialog.Builder builder= new AlertDialog.Builder(context,R.style.Dialog_Fullscreen);
         final Dialog dialog= builder.create();
         dialog.show();
         View root= LayoutInflater.from(context).inflate(R.layout.show_bitmap_full, null);
         dialog.getWindow().setContentView(root);
-        ImageView imgV=root.findViewById(R.id.img_fullscreen);
+        final ImageView imgV=root.findViewById(R.id.img_fullscreen);
+        final DisplayMetrics metrics = ScreenUtil.getScreenSize(context);
         String uri= purchaseOrder.getDataUri();
-        Bitmap bitmap= BitmapFactory.decodeFile(uri);
+        final Bitmap temp= BitmapFactory.decodeFile(uri);
+        final Bitmap bitmap=BitmapUtil.proportionalScaleBitmap(temp,metrics.widthPixels);
         imgV.setImageBitmap(bitmap);
-        imgV.setScaleType(ImageView.ScaleType.FIT_CENTER);
+//        imgV.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        final BitmapUtil.CheckZoom check = new BitmapUtil.CheckZoom(false);
+        imgV.setOnTouchListener(new OnDoubleClickListener(new OnDoubleClickListener.DoubleClickCallback() {
+            @Override
+            public void onDoubleClick() {
+                if (check.isZoom())
+                    imgV.setImageBitmap(bitmap);
+                else
+                    imgV.setImageBitmap(BitmapUtil.proportionalScaleBitmap(temp,(int)(metrics.widthPixels*1.5)));
+                check.setZoom(!check.isZoom());
+            }
+        }));
     }
 
     //查看进货单列表
@@ -727,7 +744,7 @@ public class DashboardFragment extends Fragment {
         service.close();
         if (purOrderList.size()<1){
             TextView tV = new TextView(context);
-            tV.setWidth(tableHeader.getWidth());
+            tV.setWidth(ScreenUtil.getScreenSize(context).widthPixels);
             tV.setTextAlignment(View.TEXT_ALIGNMENT_CENTER);
             tV.setText("该商品未添加进货单！");
             tV.setTextSize(24);
@@ -996,18 +1013,17 @@ public class DashboardFragment extends Fragment {
         final Dialog dialogChoose= builder.create();
         dialogChoose.show();
         final View root= LayoutInflater.from(context).inflate(R.layout.fragment_dashboard, null);
-        EditText searchBox = root.findViewById(R.id.text_search);
-        searchBox.setHint("输入供货商名称");
-        (searchBox).setWidth((int)(root.getWidth()*.7));
+//        EditText searchBox = root.findViewById(R.id.text_search);
+//        searchBox.setHint("输入供货商名称");
+//        (searchBox).setWidth((int)(ScreenUtil.getScreenSize(context).widthPixels*.8));
         root.findViewById(R.id.btn_add).setAlpha(0f);
         root.findViewById(R.id.btn_add).setEnabled(false);
         root.findViewById(R.id.btn_jumpPage).setAlpha(0f);
         root.findViewById(R.id.btn_jumpPage).setEnabled(false);
-        Window dialogWindow = dialogChoose.getWindow();
+        final Window dialogWindow = dialogChoose.getWindow();
         dialogWindow.setContentView(root);
         dialogWindow.clearFlags(WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM);
-        DisplayMetrics metrics = new DisplayMetrics();
-        dialogWindow.getWindowManager().getDefaultDisplay().getRealMetrics(metrics);
+        DisplayMetrics metrics = ScreenUtil.getScreenSize(context);
         WindowManager.LayoutParams attr = dialogWindow.getAttributes();
         attr.height=(int)(metrics.heightPixels*0.9f);
         attr.width=(int)(metrics.widthPixels*1f);
@@ -1015,9 +1031,13 @@ public class DashboardFragment extends Fragment {
         dialogWindow.setAttributes(attr);
         final LinearLayout header = root.findViewById(R.id.MyTableHeader);
         final LinearLayout tableBody=root.findViewById(R.id.MyTable);
-        if (obj instanceof PurchaseOrder)
-        loadChoiceDialogItems(context,dialogChoose,header,tableBody,(PurchaseOrder)obj,null);
-        else loadPurChoiceDialogItems(context,dialogChoose,header,tableBody,(Goods)obj,null);
+        if (obj instanceof PurchaseOrder){
+            ((EditText)root.findViewById(R.id.text_search)).setHint("输入商品名称");
+            loadChoiceDialogItems(context,dialogChoose,header,tableBody,(PurchaseOrder)obj,null);
+        }
+        else{
+            ((EditText)root.findViewById(R.id.text_search)).setHint("输入供货商名称");
+            loadPurChoiceDialogItems(context,dialogChoose,header,tableBody,(Goods)obj,null);}
         //查询
         final EditText et=root.findViewById(R.id.text_search);
         (root.findViewById(R.id.btn_search)).setOnClickListener(new View.OnClickListener() {

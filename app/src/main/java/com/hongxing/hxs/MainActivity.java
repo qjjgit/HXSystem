@@ -7,7 +7,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
-import android.graphics.Bitmap;
 import android.os.Build;
 import android.os.Bundle;
 import android.text.TextUtils;
@@ -239,6 +238,13 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    public void test(View view){
+        CrudService service = new CrudService(this);
+        String bar = ((EditText) findViewById(R.id.editText)).getText().toString();
+        goods = service.findByBarcode(bar);service.close();
+        showScanResultPage();
+    }
+
     //进货单列表页面  by click
     public void showPurchaseOrderPage(View view){
         if (goods==null){
@@ -261,43 +267,6 @@ public class MainActivity extends AppCompatActivity {
             ToastUtil.showShortToast("createPhotoFile异常\n"+e.getMessage());
         }
         return  image;
-    }
-
-    /**
-     * 缩放图片裁剪指定大小的正方形
-     * @param bitmap 原图
-     * @param edgeLength 正方形的边长
-     * @return 裁剪后的图片
-     */
-    public static Bitmap centerSquareScaleBitmap(Bitmap bitmap, int edgeLength, float scale){
-        if(null == bitmap || edgeLength <= 0){
-            return null;
-        }
-        Bitmap result = bitmap;
-        edgeLength=(int)(edgeLength * scale + 0.5f);
-        int width = bitmap.getWidth();
-        int height = bitmap.getHeight();
-        if(width > edgeLength && height > edgeLength){
-            int longerEdge = (int)(edgeLength * Math.max(width, height) / Math.min(width, height));
-            int scaleWidth = width > height ? longerEdge : edgeLength;
-            int scaleHeight = width > height ? edgeLength : longerEdge;
-            Bitmap scaleBitmap;
-            try{
-                scaleBitmap = Bitmap.createScaledBitmap(bitmap, scaleWidth, scaleHeight, true);
-            }catch(Exception e){
-                return null;
-            }
-            //从图片的正中间裁剪
-            int xTopLeft = (scaleWidth - edgeLength)/2;
-            int yTopLeft = (scaleHeight - edgeLength)/2;
-            try{
-                result = Bitmap.createBitmap(scaleBitmap, xTopLeft, yTopLeft, edgeLength, edgeLength);
-                scaleBitmap.recycle();
-            }catch(Exception e){
-                return null;
-            }
-        }
-        return result;
     }
 
     //将dp转换成px
