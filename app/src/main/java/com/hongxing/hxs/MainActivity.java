@@ -5,11 +5,13 @@ import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.os.Build;
 import android.os.Bundle;
 import android.text.TextUtils;
+import android.util.DisplayMetrics;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -24,8 +26,10 @@ import com.hongxing.hxs.db.DBManager;
 import com.hongxing.hxs.entity.Goods;
 import com.hongxing.hxs.service.CrudService;
 import com.hongxing.hxs.ui.dashboard.DashboardFragment;
+import com.hongxing.hxs.ui.dialog.MyDialog;
 import com.hongxing.hxs.utils.CommonUtils;
 import com.hongxing.hxs.utils.GoodsUtils;
+import com.hongxing.hxs.utils.ScreenUtil;
 import com.hongxing.hxs.utils.ToastUtil;
 import com.huawei.hms.hmsscankit.ScanUtil;
 import com.huawei.hms.ml.scan.HmsScan;
@@ -81,6 +85,7 @@ public class MainActivity extends AppCompatActivity {
                             Manifest.permission.WRITE_EXTERNAL_STORAGE},
                     0X03);
         }
+//        this.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
     }
 
     @Override
@@ -148,18 +153,10 @@ public class MainActivity extends AppCompatActivity {
             ToastUtil.showShortToast("没有录入与"+barcode+"对应的商品！");
             goods=new Goods();
             goods.setBarcode(barcode);
-            showAddGoodsPage();
+            MyDialog.showAddGoodsPage(this);
         }else{
-//            Intent intent = new Intent(MainActivity.this, ScanResultDialog.class);
-//            startActivity(intent);
             showScanResultPage();
         }
-    }
-
-    //点击 添加商品  by click
-    public void addGoodsClick(View v){
-        goods=new Goods();
-        showAddGoodsPage();
     }
 
     //扫码结果页面
@@ -184,59 +181,59 @@ public class MainActivity extends AppCompatActivity {
     }
 
     //添加商品页面
-    public void showAddGoodsPage(){
-        View view= LayoutInflater.from(this).inflate(R.layout.dialog_add_goods_page, null);
-        final TextView cancel =view.findViewById(R.id.addGoods_cancel);
-        final TextView sure =view.findViewById(R.id.addGoods_sure);
-        final EditText eText_name =view.findViewById(R.id.addGoods_name);
-        final Spinner spinner_unit =view.findViewById(R.id.addGoods_unitList);
-        final TextView tView_barcode=view.findViewById(R.id.addGoods_barcode);
-        final EditText eText_price =view.findViewById(R.id.addGoods_price);
-        final EditText eText_orig =view.findViewById(R.id.addGoods_orig);
-        AlertDialog.Builder builder= new AlertDialog.Builder(MainActivity.this);
-        final Dialog dialog= builder.create();
-        dialog.show();
-        dialog.getWindow().setContentView(view);
-        dialog.setCancelable(false);
-        if (goods.getBarcode()!=null){
-            tView_barcode.setText(goods.getBarcode());
-            tView_barcode.setFocusable(false);
-        }
-        //使editext可以唤起软键盘
-        dialog.getWindow().clearFlags(WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM);
-        spinner_unit.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
-                String item = spinner_unit.getSelectedItem().toString();
-                goods.setUnit(item);
-            }
-            @Override
-            public void onNothingSelected(AdapterView<?> adapterView) {
-//                System.out.println("没有选择单位，已设为默认值“个”");
-                goods.setUnit("个");
-            }
-        });
-        cancel.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                goods=null;
-                dialog.dismiss();
-            }
-        });
-        sure.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                HashMap<String, String> map = new HashMap<>();
-                map.put("name",eText_name.getText().toString());
-                map.put("barcode",tView_barcode.getText().toString());
-                map.put("unit",goods.getUnit());
-                map.put("price",eText_price.getText().toString());
-                map.put("orig",eText_orig.getText().toString());
-                boolean ok = GoodsUtils.checkGoodsInfoForAction(MainActivity.this,goods,map,GoodsUtils.DO_ADD);
-                if (ok) dialog.dismiss();
-            }
-        });
-    }
+//    public void showAddGoodsPage(){
+//        View view= LayoutInflater.from(this).inflate(R.layout.dialog_add_goods_page, null);
+//        final TextView cancel =view.findViewById(R.id.addGoods_cancel);
+//        final TextView sure =view.findViewById(R.id.addGoods_sure);
+//        final EditText eText_name =view.findViewById(R.id.addGoods_name);
+//        final Spinner spinner_unit =view.findViewById(R.id.addGoods_unitList);
+//        final TextView tView_barcode=view.findViewById(R.id.addGoods_barcode);
+//        final EditText eText_price =view.findViewById(R.id.addGoods_price);
+//        final EditText eText_orig =view.findViewById(R.id.addGoods_orig);
+//        AlertDialog.Builder builder= new AlertDialog.Builder(MainActivity.this);
+//        final Dialog dialog= builder.create();
+//        dialog.show();
+//        dialog.getWindow().setContentView(view);
+//        dialog.setCancelable(false);
+//        if (goods.getBarcode()!=null){
+//            tView_barcode.setText(goods.getBarcode());
+//            tView_barcode.setFocusable(false);
+//        }
+//        //使editext可以唤起软键盘
+//        dialog.getWindow().clearFlags(WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM);
+//        spinner_unit.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+//            @Override
+//            public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
+//                String item = spinner_unit.getSelectedItem().toString();
+//                goods.setUnit(item);
+//            }
+//            @Override
+//            public void onNothingSelected(AdapterView<?> adapterView) {
+////                System.out.println("没有选择单位，已设为默认值“个”");
+//                goods.setUnit("个");
+//            }
+//        });
+//        cancel.setOnClickListener(new View.OnClickListener() {
+//            @Override
+//            public void onClick(View v) {
+//                goods=null;
+//                dialog.dismiss();
+//            }
+//        });
+//        sure.setOnClickListener(new View.OnClickListener() {
+//            @Override
+//            public void onClick(View v) {
+//                HashMap<String, String> map = new HashMap<>();
+//                map.put("name",eText_name.getText().toString());
+//                map.put("barcode",tView_barcode.getText().toString());
+//                map.put("unit",goods.getUnit());
+//                map.put("price",eText_price.getText().toString());
+//                map.put("orig",eText_orig.getText().toString());
+//                boolean ok = GoodsUtils.checkGoodsInfoForAction(MainActivity.this,goods,map,GoodsUtils.DO_ADD);
+//                if (ok) dialog.dismiss();
+//            }
+//        });
+//    }
 
     //进货单列表页面  by click
     public void showPurchaseOrderPage(View view){

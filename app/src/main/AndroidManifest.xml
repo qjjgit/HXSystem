@@ -26,7 +26,8 @@
             android:name=".MainActivity"
             android:launchMode="standard"
             android:label="鸿兴系统"
-            android:configChanges="orientation|keyboardHidden|screenSize">
+            android:screenOrientation="sensorPortrait"
+            android:configChanges="orientation|keyboardHidden|screenSize|fontScale">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

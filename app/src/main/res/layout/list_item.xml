@@ -8,7 +8,7 @@
     <ImageView
         android:id="@+id/pur_img_item"
         android:layout_width="100dp"
-        android:layout_height="100dp"
+        android:layout_height="101dp"
         android:layout_marginTop="5dp"
         android:layout_marginBottom="6dp"
         android:layout_marginStart="20dp"

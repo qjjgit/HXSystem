@@ -39,7 +39,6 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginStart="3dp"
-            android:onClick="addGoodsClick"
             android:text="添加商品"
             android:textAlignment="center"
             android:paddingTop="5dp"

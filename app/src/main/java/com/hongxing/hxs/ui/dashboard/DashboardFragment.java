@@ -48,12 +48,15 @@ import com.hongxing.hxs.R;
 import com.hongxing.hxs.entity.Goods;
 import com.hongxing.hxs.entity.PurchaseOrder;
 import com.hongxing.hxs.service.CrudService;
+import com.hongxing.hxs.ui.dialog.MyDialog;
 import com.hongxing.hxs.utils.BitmapUtil;
 import com.hongxing.hxs.utils.CommonUtils;
 import com.hongxing.hxs.utils.GoodsUtils;
 import com.hongxing.hxs.utils.ScreenUtil;
 import com.hongxing.hxs.utils.StatusCode;
 import com.hongxing.hxs.utils.ToastUtil;
+
+import org.w3c.dom.Text;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -113,18 +116,28 @@ public class DashboardFragment extends Fragment {
                 doSearch();
                 }
             });
-            final TextView btn = root.findViewById(R.id.btn_jumpPage);
-            btn.setOnClickListener(new View.OnClickListener() {
+            final TextView btnAdd=root.findViewById(R.id.btn_add);
+            btnAdd.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    if (nowListPage==0x00) MyDialog.showAddGoodsPage(getContext());
+                    else useCameraForAddPurOrder(getContext());
+                }
+            });
+            final TextView btnJump = root.findViewById(R.id.btn_jumpPage);
+            btnJump.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 String str1="转到进货单";
                 String str2="输入名称或条码";
+                String str3="添加商品";
                 if (nowListPage==0x00){
-                    nowListPage=0x01;str1="转到商品列表";str2="输入供货商名称";
+                    nowListPage=0x01;str1="转到商品列表";str2="输入供货商名称";str3="添加进货单";
                 }
                 else nowListPage=0x00;
                 searchTextV.setHint(str2);
-                btn.setText(str1);
+                btnJump.setText(str1);
+                btnAdd.setText(str3);
                 nowSearchWord="";
                 searchTextV.setText(nowSearchWord);
                 tableHeader.removeAllViews();
@@ -200,6 +213,36 @@ public class DashboardFragment extends Fragment {
                 }
             });
         }
+    }
+
+    //确定添加进货单
+    private void sureToAdd_purOrder(Context context, String strDate, String supplier,Bitmap compBitmap){
+        PurchaseOrder purchaseOrder = new PurchaseOrder(UUID.randomUUID().toString(),supplier,strDate,MainActivity.showPIC.getPath());
+        CrudService service = new CrudService(context);
+        service.savePurchaseOrder(MainActivity.goods,purchaseOrder);
+        service.close();
+        final LinearLayout row = (LinearLayout) LayoutInflater.from(context).inflate(R.layout.list_item, null);
+        ((TextView) row.findViewById(R.id.pur_supplier_item)).setText(supplier);
+        ((TextView) row.findViewById(R.id.pur_date_item)).setText(strDate);
+        if (purListView!=null){
+            setPurItemOnClickEvent(context,row,purchaseOrder,purListView.getChildCount(),StatusCode.IN_PURLIST_VIEW);
+            purListView.addView(row);
+        }else{
+            setPurItemOnClickEvent(context,row,purchaseOrder,tableBody.getChildCount(),StatusCode.IN_TABLE_BODY);
+            tableBody.addView(row);
+        }
+        String imgPath=CommonUtils.getDiskCachePath(context)+File.separator+purchaseOrder.getId().replaceAll("-","")+".jpg";
+        File file = new File(imgPath);
+        try {
+            file.createNewFile();
+            FileOutputStream fos = new FileOutputStream(file);
+            compBitmap.compress(Bitmap.CompressFormat.JPEG,20,fos);
+            fos.flush();
+            fos.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        ToastUtil.showShortToast("进货单添加成功！");
     }
 
     @SuppressLint("HandlerLeak")
@@ -698,11 +741,11 @@ public class DashboardFragment extends Fragment {
         imgV.setOnTouchListener(new OnDoubleClickListener(new OnDoubleClickListener.DoubleClickCallback() {
             @Override
             public void onDoubleClick() {
-                if (check.isZoom())
+                if (check.isMagnified())
                     imgV.setImageBitmap(bitmap);
                 else
-                    imgV.setImageBitmap(BitmapUtil.proportionalScaleBitmap(temp,(int)(metrics.widthPixels*1.65)));
-                check.setZoom(!check.isZoom());
+                    imgV.setImageBitmap(BitmapUtil.proportionalScaleBitmap(temp,(int)(metrics.widthPixels*1.62)));
+                check.setMagnified(!check.isMagnified());
             }
         }));
     }
@@ -715,20 +758,19 @@ public class DashboardFragment extends Fragment {
         }catch (Exception e){e.printStackTrace();return;}
         AlertDialog.Builder builder= new AlertDialog.Builder(context,R.style.Dialog_Fullscreen);
         final Dialog dialog= builder.create();
+        dialog.setOnCancelListener(new DialogInterface.OnCancelListener() {
+            @Override
+            public void onCancel(DialogInterface dialogInterface) {
+                purListView=null;
+            }
+        });
         dialog.show();
         dialog.getWindow().setContentView(root);
         //添加进货单
         root.findViewById(R.id.btn_addPurOrder).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);//设置动作为调用照相机
-                File file = new MainActivity().createPhotoFile();
-                if (file!=null){
-                    MainActivity.showPIC=file;
-                    Uri imgUri= FileProvider.getUriForFile(context,context.getPackageName()+".fileprovider", file);
-                    intent.putExtra(MediaStore.EXTRA_OUTPUT,imgUri);//指定系统相机拍照保存在imageFileUri所指的位置
-                }
-                startActivityForResult(intent, StatusCode.REQUEST_CODE_SHOOT);
+                useCameraForAddPurOrder(context);
             }
         });
         //关联现有进货单
@@ -760,31 +802,6 @@ public class DashboardFragment extends Fragment {
             purListView.addView(row);
         }
         asynchronousLoadPurImgs(context,purListView,purOrderList);
-    }
-
-    //确定添加进货单
-    private void sureToAdd_purOrder(Context context, String strDate, String supplier,Bitmap compBitmap){
-        PurchaseOrder purchaseOrder = new PurchaseOrder(UUID.randomUUID().toString(),supplier,strDate,MainActivity.showPIC.getPath());
-        CrudService service = new CrudService(context);
-        service.savePurchaseOrder(MainActivity.goods.getId(),purchaseOrder);
-        service.close();
-        final LinearLayout row = (LinearLayout) LayoutInflater.from(context).inflate(R.layout.list_item, null);
-        ((TextView) row.findViewById(R.id.pur_supplier_item)).setText(supplier);
-        ((TextView) row.findViewById(R.id.pur_date_item)).setText(strDate);
-        setPurItemOnClickEvent(context,row,purchaseOrder,purListView.getChildCount(),StatusCode.IN_PURLIST_VIEW);
-        purListView.addView(row);
-        String imgPath=CommonUtils.getDiskCachePath(context)+File.separator+purchaseOrder.getId().replaceAll("-","")+".jpg";
-        File file = new File(imgPath);
-        try {
-            file.createNewFile();
-            FileOutputStream fos = new FileOutputStream(file);
-            compBitmap.compress(Bitmap.CompressFormat.JPEG,20,fos);
-            fos.flush();
-            fos.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        ToastUtil.showShortToast("进货单添加成功！");
     }
 
     //给进货单item添加onClick事件
@@ -1297,5 +1314,17 @@ public class DashboardFragment extends Fragment {
         });
         header.addView(button);
         asynchronousLoadPurImgs(context,tableBody,purOrderList);
+    }
+
+    //调用相机 拍照 进货单
+    private void useCameraForAddPurOrder(Context context){
+        Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);//设置动作为调用照相机
+        File file = new MainActivity().createPhotoFile();
+        if (file!=null){
+            MainActivity.showPIC=file;
+            Uri imgUri= FileProvider.getUriForFile(context,context.getPackageName()+".fileprovider", file);
+            intent.putExtra(MediaStore.EXTRA_OUTPUT,imgUri);//指定系统相机拍照保存在imageFileUri所指的位置
+        }
+        startActivityForResult(intent, StatusCode.REQUEST_CODE_SHOOT);
     }
 }

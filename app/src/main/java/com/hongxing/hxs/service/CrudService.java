@@ -37,13 +37,17 @@ public class CrudService {
     }
 
     //增加进货单
-    public void savePurchaseOrder(int goodsId,PurchaseOrder purchaseOrder) {
+    public void savePurchaseOrder(Goods goods,PurchaseOrder purchaseOrder) {
+        Integer goodsId=null;
+        if (goods!=null)goodsId=goods.getId();
         db.beginTransaction();
         try {
             String sql1="insert into pur_order('id','supplier','date','data_uri') values(?,?,?,?)";
             db.execSQL(sql1,new Object[]{purchaseOrder.getId(),purchaseOrder.getSupplier(),purchaseOrder.getDate(),purchaseOrder.getDataUri()});
-            String sql2="insert into goods_pur_o('goods_id','pur_id') values(?,?)";
-            db.execSQL(sql2,new Object[]{goodsId,purchaseOrder.getId()});
+            if (goodsId!=null){
+                String sql2="insert into goods_pur_o('goods_id','pur_id') values(?,?)";
+                db.execSQL(sql2,new Object[]{goodsId,purchaseOrder.getId()});
+            }
             db.setTransactionSuccessful();
         }finally {
             db.endTransaction();

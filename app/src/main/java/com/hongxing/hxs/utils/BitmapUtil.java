@@ -10,15 +10,15 @@ public class BitmapUtil {
         scale=ScreenUtil.getDeviceDensity(MainActivity.getMainContext());
     }
     public static class CheckZoom{
-        boolean isZoom;
-        public CheckZoom(boolean isZoom) {
-            this.isZoom = isZoom;
+        boolean magnified;
+        public CheckZoom(boolean isMagnified) {
+            this.magnified = isMagnified;
         }
-        public boolean isZoom() {
-            return isZoom;
+        public boolean isMagnified() {
+            return magnified;
         }
-        public void setZoom(boolean zoom) {
-            isZoom = zoom;
+        public void setMagnified(boolean magnified) {
+            this.magnified = magnified;
         }
     }
     /**

@@ -4,6 +4,8 @@ import android.annotation.SuppressLint;
 import android.view.MotionEvent;
 import android.view.View;
 
+import com.hongxing.hxs.R;
+
 public class OnDoubleClickListener implements View.OnTouchListener{
     private int count = 0;//点击次数
     private long firstClick = 0;//第一次点击时间
