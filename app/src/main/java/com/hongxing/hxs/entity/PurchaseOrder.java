@@ -49,7 +49,7 @@ public class PurchaseOrder {
         return id;
     }
 
-    public String getShorterId(){
+    private String getShorterId(){
         return id.replaceAll("-","");
     }
 

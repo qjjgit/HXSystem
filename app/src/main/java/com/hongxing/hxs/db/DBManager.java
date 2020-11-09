@@ -5,16 +5,12 @@ import android.database.sqlite.SQLiteDatabase;
 import android.util.Log;
 
 import com.hongxing.hxs.MainActivity;
-import com.hongxing.hxs.service.CrudService;
 import com.hongxing.hxs.utils.zip.ZIPUtils;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.Locale;
 
 public class DBManager {
     //数据库存储路径
@@ -94,30 +90,11 @@ public class DBManager {
 
     public static boolean exportDBFileToDir(String pathPrefix){
         try {
-//            String date = new SimpleDateFormat("yyyy-MM-dd.HH.mm.ss", Locale.CHINA).format(new Date());
             String zipFilePath=pathPrefix+"备份.zip";
             ZIPUtils.compress(MainActivity.APPStoragePath,zipFilePath);
             return true;
         }catch (Exception e){
             return false;
         }
-//        try {
-//            BufferedInputStream inputStream= new BufferedInputStream(new FileInputStream(jhPath));
-//            String filePath=dir+File.separator
-//                    +new SimpleDateFormat("yyyy-MM-dd_HH.mm.ss备份").format(new Date())
-//                    +".s3db";
-//            BufferedOutputStream outputStream= new BufferedOutputStream(new FileOutputStream(filePath));
-//            int j;
-//            byte[] bytes2 =new byte[1024];
-//            while((j=inputStream.read(bytes2))!=-1) {
-//                outputStream.write(bytes2,0,j);
-//            }
-//            inputStream.close();
-//            outputStream.close();
-//            return true;
-//        }catch (Exception e){
-//            e.printStackTrace();
-//            return false;
-//        }
     }
 }

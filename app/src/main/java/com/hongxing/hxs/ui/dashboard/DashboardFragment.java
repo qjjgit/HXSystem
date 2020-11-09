@@ -1035,9 +1035,6 @@ public class DashboardFragment extends Fragment {
         final Dialog dialogChoose= builder.create();
         dialogChoose.show();
         final View root= LayoutInflater.from(context).inflate(R.layout.fragment_dashboard, null);
-//        EditText searchBox = root.findViewById(R.id.text_search);
-//        searchBox.setHint("输入供货商名称");
-//        (searchBox).setWidth((int)(ScreenUtil.getScreenSize(context).widthPixels*.8));
         root.findViewById(R.id.btn_add).setAlpha(0f);
         root.findViewById(R.id.btn_add).setEnabled(false);
         root.findViewById(R.id.btn_jumpPage).setAlpha(0f);
@@ -1047,7 +1044,7 @@ public class DashboardFragment extends Fragment {
         dialogWindow.clearFlags(WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM);
         DisplayMetrics metrics = ScreenUtil.getScreenSize(context);
         WindowManager.LayoutParams attr = dialogWindow.getAttributes();
-        attr.height=(int)(metrics.heightPixels*0.9f);
+        attr.height=(int)(metrics.heightPixels*1f);
         attr.width=(int)(metrics.widthPixels*1f);
         attr.alpha=1f;
         dialogWindow.setAttributes(attr);
