@@ -1,7 +1,10 @@
 package com.hongxing.hxs.entity;
 
 
-import androidx.annotation.Nullable;
+import com.hongxing.hxs.MainActivity;
+import com.hongxing.hxs.utils.CommonUtils;
+
+import java.io.File;
 
 public class PurchaseOrder {
     private String id;
@@ -12,17 +15,16 @@ public class PurchaseOrder {
     public PurchaseOrder() {
     }
 
-    public PurchaseOrder(String id, String supplier, String date) {
-        this.id = id;
-        this.supplier = supplier;
-        this.date = date;
-    }
-
     public PurchaseOrder(String id, String supplier, String date, String data_uri) {
         this.id = id;
         this.supplier = supplier;
         this.date = date;
         this.data_uri = data_uri;
+    }
+
+    public String getCachePath(){
+        return CommonUtils.getDiskCachePath(MainActivity.getMainContext())
+                + File.separator+getShorterId()+".jpg";
     }
 
     @Override
@@ -45,6 +47,10 @@ public class PurchaseOrder {
 
     public String getId() {
         return id;
+    }
+
+    public String getShorterId(){
+        return id.replaceAll("-","");
     }
 
     public void setId(String id) {

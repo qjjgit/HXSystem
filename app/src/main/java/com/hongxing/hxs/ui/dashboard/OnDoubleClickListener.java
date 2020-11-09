@@ -4,7 +4,6 @@ import android.annotation.SuppressLint;
 import android.view.MotionEvent;
 import android.view.View;
 
-import com.hongxing.hxs.R;
 
 public class OnDoubleClickListener implements View.OnTouchListener{
     private int count = 0;//点击次数
@@ -59,8 +58,9 @@ public class OnDoubleClickListener implements View.OnTouchListener{
         }
         return true;
     }
-    //检查双击的坐标是否在 ±20之内
+
+    //检查双击的坐标是否在 ±45之内
     private boolean checkXYRange(float xx,float yy){
-        return (xx>x-20f&&xx<x+20f)&&(yy > y - 20f && yy < y + 20f);
+        return (xx>x-45f&&xx<x+45f)&&(yy > y - 45f && yy < y + 45f);
     }
 }

@@ -7,10 +7,8 @@ import android.database.sqlite.SQLiteDatabase;
 import com.hongxing.hxs.db.DBManager;
 import com.hongxing.hxs.entity.Goods;
 import com.hongxing.hxs.entity.PurchaseOrder;
-
 import java.io.File;
 import java.util.ArrayList;
-import java.util.Arrays;
 
 public class CrudService {
 //    private DatabaseHelper databaseHelper;
@@ -38,15 +36,18 @@ public class CrudService {
 
     //增加进货单
     public void savePurchaseOrder(Goods goods,PurchaseOrder purchaseOrder) {
-        Integer goodsId=null;
-        if (goods!=null)goodsId=goods.getId();
         db.beginTransaction();
         try {
-            String sql1="insert into pur_order('id','supplier','date','data_uri') values(?,?,?,?)";
-            db.execSQL(sql1,new Object[]{purchaseOrder.getId(),purchaseOrder.getSupplier(),purchaseOrder.getDate(),purchaseOrder.getDataUri()});
-            if (goodsId!=null){
-                String sql2="insert into goods_pur_o('goods_id','pur_id') values(?,?)";
-                db.execSQL(sql2,new Object[]{goodsId,purchaseOrder.getId()});
+            String sql0="insert into pur_order('id','supplier','date','data_uri') values(?,?,?,?)";
+            db.execSQL(sql0,new Object[]{purchaseOrder.getId(),purchaseOrder.getSupplier(),purchaseOrder.getDate(),purchaseOrder.getDataUri()});
+            if (goods!=null){
+                String sql1="select id from goodsdata where name=\""+goods.getName()+"\"";
+                Cursor cursor= db.rawQuery(sql1,null);
+                while(cursor.moveToNext()){
+                    int id =cursor.getInt(cursor.getColumnIndex("id"));
+                    String sql="insert into goods_pur_o('goods_id','pur_id') values(?,\""+purchaseOrder.getId()+"\")";
+                    db.execSQL(sql,new Object[]{id});
+                }
             }
             db.setTransactionSuccessful();
         }finally {
@@ -54,6 +55,7 @@ public class CrudService {
         }
     }
 
+    //通过商品id获取该商品的进货单list
     public ArrayList<PurchaseOrder> getPurOrderListByGoodsId(int goodsId) {
         String sql="select * from pur_order where id in(select pur_id from goods_pur_o where goods_id=?)";
         Cursor cursor= db.rawQuery(sql,new String[]{String.valueOf(goodsId)});
@@ -68,7 +70,7 @@ public class CrudService {
         return list;
     }
 
-    //删除 进货单、对应的中间表、磁盘中的img文件
+    //删除 进货单、对应的中间表、磁盘中的img文件和缓存
     public boolean deletePurOrder(PurchaseOrder purO){
         String sql1="delete from goods_pur_o where pur_id=\""+purO.getId()+"\"";
         String sql2="delete from pur_order where id=\""+purO.getId()+"\"";
@@ -76,8 +78,10 @@ public class CrudService {
             db.beginTransaction();//开启事务
             db.execSQL(sql1);
             db.execSQL(sql2);
-            File file = new File(purO.getDataUri());
-            file.delete();
+            File img = new File(purO.getDataUri());
+            if (img.exists())img.delete();
+            File cache = new File(purO.getCachePath());
+            if (cache.exists())cache.delete();
             db.setTransactionSuccessful();//声明事务成功
             return true;
         }catch (Exception e){
@@ -94,12 +98,14 @@ public class CrudService {
                 goods.getName(),goods.getBarcode(),goods.getUnit(),goods.getPrice(),goods.getOrig(),goods.getId()});
     }
 
+    //更新进货单
     public void updatePurOrder(PurchaseOrder pur){
         String sql="update pur_order set supplier=\""+pur.getSupplier()+"\","
                     +"date=\""+pur.getDate()+"\" where id=\""+pur.getId()+"\"";
         db.execSQL(sql);
     }
 
+    //是否存在 name和unit的商品
     public boolean existGoodsByNameAndUnit(String name,String unit){
         boolean exist=false;
 //        byte[] bytes = name.getBytes();
@@ -244,6 +250,7 @@ public class CrudService {
         int count = cursor.getCount();
         return count;
     }
+
     //统计进货单数据条数
     public int getPurOrderCount(){
         String sql="select id from pur_order";
@@ -252,6 +259,7 @@ public class CrudService {
         return count;
     }
 
+    //解除绑定进货单
     public boolean unlinkPurOrder(Goods goods, PurchaseOrder pur) {
         db.beginTransaction();
         try {
@@ -266,6 +274,7 @@ public class CrudService {
         }
     }
 
+    //绑定进货单 到 商品
     public boolean bindingPurOrder2Goods(ArrayList<PurchaseOrder> purChoices, Integer goods_id) {
         db.beginTransaction();
         try {

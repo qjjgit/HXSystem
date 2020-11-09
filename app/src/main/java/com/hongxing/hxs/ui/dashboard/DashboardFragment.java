@@ -56,8 +56,6 @@ import com.hongxing.hxs.utils.ScreenUtil;
 import com.hongxing.hxs.utils.StatusCode;
 import com.hongxing.hxs.utils.ToastUtil;
 
-import org.w3c.dom.Text;
-
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -132,7 +130,7 @@ public class DashboardFragment extends Fragment {
                 String str2="输入名称或条码";
                 String str3="添加商品";
                 if (nowListPage==0x00){
-                    nowListPage=0x01;str1="转到商品列表";str2="输入供货商名称";str3="添加进货单";
+                    nowListPage=0x01;str1="转到商品列表";str2="输入供货商名称";str3="添加货单";
                 }
                 else nowListPage=0x00;
                 searchTextV.setHint(str2);
@@ -222,6 +220,7 @@ public class DashboardFragment extends Fragment {
         service.savePurchaseOrder(MainActivity.goods,purchaseOrder);
         service.close();
         final LinearLayout row = (LinearLayout) LayoutInflater.from(context).inflate(R.layout.list_item, null);
+        ((ImageView)row.findViewById(R.id.pur_img_item)).setImageBitmap(compBitmap);
         ((TextView) row.findViewById(R.id.pur_supplier_item)).setText(supplier);
         ((TextView) row.findViewById(R.id.pur_date_item)).setText(strDate);
         if (purListView!=null){
@@ -231,7 +230,7 @@ public class DashboardFragment extends Fragment {
             setPurItemOnClickEvent(context,row,purchaseOrder,tableBody.getChildCount(),StatusCode.IN_TABLE_BODY);
             tableBody.addView(row);
         }
-        String imgPath=CommonUtils.getDiskCachePath(context)+File.separator+purchaseOrder.getId().replaceAll("-","")+".jpg";
+        String imgPath=purchaseOrder.getCachePath();
         File file = new File(imgPath);
         try {
             file.createNewFile();
@@ -597,7 +596,7 @@ public class DashboardFragment extends Fragment {
                 for (int i = 0; i < purOrderList.size(); i++) {
                     PurchaseOrder pur = purOrderList.get(i);
                     if (pur==null){compImgs.add(null);continue;}
-                    String imgPath = cachePath+File.separator+pur.getId().replaceAll("-","") + ".jpg";
+                    String imgPath = pur.getCachePath();
                     Bitmap bitmap;
                     if (cacheList.contains(imgPath)){
                         bitmap=BitmapFactory.decodeFile(imgPath);
@@ -634,6 +633,12 @@ public class DashboardFragment extends Fragment {
         final Context context = getContext();
         AlertDialog.Builder builder= new AlertDialog.Builder(context);
         final Dialog dialog= builder.create();
+        dialog.setOnCancelListener(new DialogInterface.OnCancelListener() {
+            @Override
+            public void onCancel(DialogInterface dialogInterface) {
+                MainActivity.goods=null;
+            }
+        });
         dialog.show();
         View view= LayoutInflater.from(context).inflate(R.layout.dialog_show_goodsinfo_page, null);
         dialog.getWindow().setContentView(view);
@@ -680,7 +685,7 @@ public class DashboardFragment extends Fragment {
         cancel.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                dialog.dismiss();
+                dialog.cancel();
             }
         });
         sure.setOnClickListener(new View.OnClickListener() {

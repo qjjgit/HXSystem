@@ -1,6 +1,7 @@
 package com.hongxing.hxs;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.Context;
@@ -11,14 +12,9 @@ import android.content.res.Configuration;
 import android.os.Build;
 import android.os.Bundle;
 import android.text.TextUtils;
-import android.util.DisplayMetrics;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
-import android.view.WindowManager;
-import android.widget.AdapterView;
-import android.widget.EditText;
-import android.widget.Spinner;
 import android.widget.TextView;
 
 import com.google.android.material.bottomnavigation.BottomNavigationView;
@@ -28,8 +24,6 @@ import com.hongxing.hxs.service.CrudService;
 import com.hongxing.hxs.ui.dashboard.DashboardFragment;
 import com.hongxing.hxs.ui.dialog.MyDialog;
 import com.hongxing.hxs.utils.CommonUtils;
-import com.hongxing.hxs.utils.GoodsUtils;
-import com.hongxing.hxs.utils.ScreenUtil;
 import com.hongxing.hxs.utils.ToastUtil;
 import com.huawei.hms.hmsscankit.ScanUtil;
 import com.huawei.hms.ml.scan.HmsScan;
@@ -45,7 +39,6 @@ import androidx.navigation.ui.NavigationUI;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -61,6 +54,7 @@ public class MainActivity extends AppCompatActivity {
     public static String APPStoragePath;
     private static Context appContext;
 
+    @SuppressLint("WrongConstant")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -85,7 +79,7 @@ public class MainActivity extends AppCompatActivity {
                             Manifest.permission.WRITE_EXTERNAL_STORAGE},
                     0X03);
         }
-//        this.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+        this.setRequestedOrientation(ActivityInfo.CONFIG_FONT_SCALE);
     }
 
     @Override
