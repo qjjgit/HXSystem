@@ -16,7 +16,6 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.annotation.Nullable;
 import androidx.annotation.NonNull;
@@ -30,6 +29,7 @@ import com.hongxing.hxs.MainActivity;
 import com.hongxing.hxs.R;
 import com.hongxing.hxs.db.DBManager;
 import com.hongxing.hxs.service.CrudService;
+import com.hongxing.hxs.utils.ToastUtil;
 import com.hongxing.hxs.utils.zip.ZIPUtils;
 import com.hongxing.hxs.utils.zip.ZipListener;
 
@@ -78,7 +78,7 @@ public class NotificationsFragment extends Fragment {
                     long last = format.parse(lastBackup.getText().toString().replace("上一次备份：","")).getTime();
                     int minute = (int)(new Date().getTime() - last) / 60000;
                     if (minute<3){
-                        Toast.makeText(context,"您刚刚进行过备份，请勿频繁操作！",Toast.LENGTH_SHORT).show();
+                        ToastUtil.showShortToast("您刚刚进行过备份，请勿频繁操作！");
                         return;
                     }
                 } catch (ParseException e) {
@@ -96,7 +96,7 @@ public class NotificationsFragment extends Fragment {
                     lastBackup.setText(("上一次备份："+date));
                     msg="已备份到" + strdir;
                 }
-                Toast.makeText(context, msg, Toast.LENGTH_LONG).show();
+                ToastUtil.showShortToast(msg);
             }
         });
         view.findViewById(R.id.btn_importData).setOnClickListener(new View.OnClickListener() {
@@ -131,7 +131,7 @@ public class NotificationsFragment extends Fragment {
                     +File.separator +"鸿兴系统"+File.separator+fileName;
             if (!fileName.contains("鸿兴系统")||!fileName.contains("备份")
                     ||!".zip".equals(fileName.substring(fileName.length() - 4))){
-                Toast.makeText(context,"请选择正确的数据包！\n(数据包在 \"鸿兴超市\" 文件夹内)",Toast.LENGTH_LONG).show();
+                ToastUtil.showShortToast("请选择正确的数据包！\n(数据包在 \"鸿兴超市\" 文件夹内)");
                 return;
             }
             final ProgressDialog progressDialog = new ProgressDialog(context);
@@ -171,12 +171,12 @@ public class NotificationsFragment extends Fragment {
                             }
                             //结束
                             if (msg.what==0x06){
-                                Toast.makeText(context,"导入完成!",Toast.LENGTH_SHORT).show();
+                                ToastUtil.showShortToast("导入完成!");
                                 progressDialog.cancel();
                             }
                             //失败
                             if (msg.what==0x08){
-                                Toast.makeText(context,"导入失败!",Toast.LENGTH_SHORT).show();
+                                ToastUtil.showShortToast("导入失败!");
                                 progressDialog.cancel();
                             }
                         }
