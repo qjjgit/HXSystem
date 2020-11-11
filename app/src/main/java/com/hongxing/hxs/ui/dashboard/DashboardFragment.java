@@ -1044,7 +1044,7 @@ public class DashboardFragment extends Fragment {
         dialogWindow.clearFlags(WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM);
         DisplayMetrics metrics = ScreenUtil.getScreenSize(context);
         WindowManager.LayoutParams attr = dialogWindow.getAttributes();
-        attr.height=(int)(metrics.heightPixels*1f);
+        attr.height=(int)(metrics.heightPixels*.9f);
         attr.width=(int)(metrics.widthPixels*1f);
         attr.alpha=1f;
         dialogWindow.setAttributes(attr);
