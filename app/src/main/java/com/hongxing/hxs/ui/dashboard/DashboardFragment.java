@@ -70,6 +70,7 @@ import java.util.HashMap;
 import java.util.Locale;
 import java.util.UUID;
 
+// TODO: 2020/11/15 待优化：进货单列表应该加入分页加载，避免总数据过多导致加载过慢，影响体验
 public class DashboardFragment extends Fragment {
 
     private short nowListPage=0x00;//0为商品信息列表，1为进货单列表
