@@ -94,5 +94,48 @@
                 app:layout_constraintTop_toTopOf="parent" />
         </androidx.constraintlayout.widget.ConstraintLayout>
     </LinearLayout>
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingStart="5dp"
+        android:paddingEnd="5dp">
+        <EditText
+            android:id="@+id/et_url"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:autofillHints=""
+            android:inputType="textUri"
+            tools:targetApi="o"
+            tools:ignore="LabelFor" />
+        <Button
+            android:id="@+id/doPostBtn"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="POST" />
+        <Button
+            android:id="@+id/doGetBtn"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="GET" />
+    </LinearLayout>
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center_horizontal">
+        <Button
+            android:id="@+id/doUploadBtn"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="上传"
+            tools:ignore="ButtonStyle" />
+        <Button
+            android:id="@+id/doDownloadBtn"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="下载"
+            tools:ignore="ButtonStyle" />
+
+    </LinearLayout>
 
 </LinearLayout>

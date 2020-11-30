@@ -1,9 +1,15 @@
 package com.hongxing.hxs.utils;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
+import android.os.Build;
 import android.os.Environment;
+import android.telephony.TelephonyManager;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
+import java.util.UUID;
 
 public class CommonUtils {
 
@@ -23,5 +29,24 @@ public class CommonUtils {
         } else {
             return context.getCacheDir().getPath();
         }
+    }
+
+    @SuppressLint({"MissingPermission", "HardwareIds"})
+    public static String getDeviceID(@Nullable Context context){
+        if (context==null)return null;
+        String id=null;
+        TelephonyManager mt = (TelephonyManager) context.getSystemService(Context.TELEPHONY_SERVICE);
+        if (Build.VERSION.SDK_INT>=Build.VERSION_CODES.O) {
+            if (mt != null) {
+                id= UUID.nameUUIDFromBytes(mt.getMeid().getBytes()).toString();
+//                return mt.getMeid();
+            }
+        }else {
+            if (mt != null) {
+                id= UUID.nameUUIDFromBytes(mt.getDeviceId().getBytes()).toString();
+//                return mt.getDeviceId();
+            }
+        }
+        return id;
     }
 }
