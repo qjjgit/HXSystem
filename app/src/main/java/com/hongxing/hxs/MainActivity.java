@@ -14,6 +14,9 @@ import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.TextView;
 
@@ -68,16 +71,37 @@ public class MainActivity extends AppCompatActivity {
         NavigationUI.setupActionBarWithNavController(this, navController, appBarConfiguration);
         NavigationUI.setupWithNavController(navView, navController);
         appContext=getApplicationContext();
-        APPStoragePath= CommonUtils.getAPPStoragePath(getApplicationContext());
+        APPStoragePath= CommonUtils.getAPPStoragePath(appContext);
         DBManager.openDatabase(this).close();
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             this.requestPermissions(
                     new String[]{
                             Manifest.permission.CAMERA,
                             Manifest.permission.READ_EXTERNAL_STORAGE,
-                            Manifest.permission.WRITE_EXTERNAL_STORAGE},
+                            Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                            Manifest.permission.READ_PHONE_STATE,
+                            Manifest.permission.INTERNET},
                     0X03);
         }
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        MenuInflater inflater = getMenuInflater();
+        inflater.inflate(R.menu.scan_btn, menu);//引用menu布局文件R.menu.scan_btn
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item){
+        if (item.getItemId() == R.id.scan_btn) {//监听菜单按钮
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                this.requestPermissions(
+                        new String[]{Manifest.permission.CAMERA, Manifest.permission.READ_EXTERNAL_STORAGE},
+                        DEFAULT_VIEW);
+            }
+        }
+        return super.onOptionsItemSelected(item);
     }
 
     @Override
@@ -95,13 +119,13 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /*开始扫码*/
-    public void btnScanClick(View v){
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            this.requestPermissions(
-                    new String[]{Manifest.permission.CAMERA, Manifest.permission.READ_EXTERNAL_STORAGE},
-                    DEFAULT_VIEW);
-        }
-    }
+//    public void btnScanClick(View v){
+//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+//            this.requestPermissions(
+//                    new String[]{Manifest.permission.CAMERA, Manifest.permission.READ_EXTERNAL_STORAGE},
+//                    DEFAULT_VIEW);
+//        }
+//    }
 
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
@@ -180,7 +204,7 @@ public class MainActivity extends AppCompatActivity {
         new DashboardFragment(this).showPurchaseOrderPage(this);
     }
 
-    //创建进货单图像文件
+    //创建进货单图像文件temp
     public File createPhotoFile() {
         /*若要修改路径，需同时修改file_paths.xml内声明的根目录*/
         String strdir=APPStoragePath+File.separator+"PurchaseOrder";

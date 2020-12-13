@@ -10,8 +10,8 @@ import java.util.zip.ZipInputStream;
 public class UnzipMainThread extends Thread {
     private String zipFileString;
     private String outPathString;
-    private ZipListener listener;
-    UnzipMainThread(String zipFileString, String outPathString, ZipListener listener) {
+    private UnzipListener listener;
+    UnzipMainThread(String zipFileString, String outPathString, UnzipListener listener) {
         this.zipFileString = zipFileString;
         this.outPathString = outPathString;
         this.listener = listener;

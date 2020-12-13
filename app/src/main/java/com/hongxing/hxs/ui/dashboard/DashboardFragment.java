@@ -34,6 +34,7 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.Spinner;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.Nullable;
 import androidx.annotation.NonNull;
@@ -55,10 +56,12 @@ import com.hongxing.hxs.utils.GoodsUtils;
 import com.hongxing.hxs.utils.ScreenUtil;
 import com.hongxing.hxs.utils.StatusCode;
 import com.hongxing.hxs.utils.ToastUtil;
+import com.hongxing.hxs.utils.http.HttpUtils;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.net.URL;
 import java.text.Collator;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -69,6 +72,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicReference;
 
 // TODO: 2020/11/15 待优化：进货单列表应该加入分页加载，避免总数据过多导致加载过慢，影响体验
 public class DashboardFragment extends Fragment {
@@ -119,7 +123,7 @@ public class DashboardFragment extends Fragment {
             btnAdd.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View view) {
-                    if (nowListPage==0x00) MyDialog.showAddGoodsPage(getContext());
+                    if (nowListPage == 0x00) MyDialog.showAddGoodsPage(getContext());
                     else useCameraForAddPurOrder(getContext());
                 }
             });
@@ -216,11 +220,11 @@ public class DashboardFragment extends Fragment {
 
     //确定添加进货单
     private void sureToAdd_purOrder(Context context, String strDate, String supplier,Bitmap compBitmap){
-        PurchaseOrder purchaseOrder = new PurchaseOrder(UUID.randomUUID().toString(),supplier,strDate,MainActivity.showPIC.getPath());
+        PurchaseOrder purchaseOrder = new PurchaseOrder(UUID.randomUUID().toString(),supplier,strDate);
         CrudService service = new CrudService(context);
         service.savePurchaseOrder(MainActivity.goods,purchaseOrder);
         service.close();
-        final LinearLayout row = (LinearLayout) LayoutInflater.from(context).inflate(R.layout.list_item, null);
+        final LinearLayout row = (LinearLayout) LayoutInflater.from(context).inflate(R.layout.list_item,null);
         ((ImageView)row.findViewById(R.id.pur_img_item)).setImageBitmap(compBitmap);
         ((TextView) row.findViewById(R.id.pur_supplier_item)).setText(supplier);
         ((TextView) row.findViewById(R.id.pur_date_item)).setText(strDate);
@@ -231,18 +235,58 @@ public class DashboardFragment extends Fragment {
             setPurItemOnClickEvent(context,row,purchaseOrder,tableBody.getChildCount(),StatusCode.IN_TABLE_BODY);
             tableBody.addView(row);
         }
-        String imgPath=purchaseOrder.getCachePath();
-        File file = new File(imgPath);
-        try {
-            file.createNewFile();
-            FileOutputStream fos = new FileOutputStream(file);
-            compBitmap.compress(Bitmap.CompressFormat.JPEG,20,fos);
-            fos.flush();
-            fos.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        ToastUtil.showShortToast("进货单添加成功！");
+        ToastUtil.showShortToast("进货单添加成功!");
+        new Thread(()->{
+            String imgPath=purchaseOrder.getCachePath();
+            try {
+                FileOutputStream fos = new FileOutputStream(imgPath);
+                compBitmap.compress(Bitmap.CompressFormat.JPEG,20,fos);
+                fos.flush();fos.close();
+                //原图较大,压缩原图后保存到磁盘中
+                Bitmap bitmap = BitmapFactory.decodeFile(MainActivity.showPIC.getPath());
+                String fileName=purchaseOrder.getFileName();
+                File file2 = new File(purchaseOrder.getDataUri());
+                FileOutputStream outputStream = new FileOutputStream(file2);
+                bitmap.compress(Bitmap.CompressFormat.JPEG,50,outputStream);
+                outputStream.flush();outputStream.close();bitmap.recycle();
+                MainActivity.showPIC.delete();
+                MainActivity.showPIC=file2;
+                HashMap<String,String> map=new HashMap<>();
+                map.put("deviceID",CommonUtils.getDeviceID(context));map.put("fileName",fileName);
+                HttpUtils.uploadImg(map, file2, new HttpUtils.Listener() {
+                    @Override
+                    public void startFileTransfer() { }
+                    @Override
+                    public void success(String response) {
+                        uiHandler.sendEmptyMessage(0x11);
+                    }
+                    @Override
+                    public void progress(int progress) { }
+                    @Override
+                    public void error(Exception e) {
+                        if (e.getMessage().startsWith("responseCode"))
+                            uiHandler.sendEmptyMessage(0x12);
+                        else
+                        HttpUtils.sendErrorLog(context,e.getMessage(), new HttpUtils.Listener() {
+                            @Override
+                            public void startFileTransfer() { }
+                            @Override
+                            public void success(String response) {
+                                uiHandler.sendEmptyMessage(0x09);
+                            }
+                            @Override
+                            public void progress(int progress) { }
+                            @Override
+                            public void error(Exception e) {
+                                uiHandler.sendEmptyMessage(0x10);
+                            }
+                        });
+                    }
+                });
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }).start();
     }
 
     @SuppressLint("HandlerLeak")
@@ -285,6 +329,18 @@ public class DashboardFragment extends Fragment {
                             if (progressDialog.isShowing()) {
                                 progressDialog.dismiss();
                             }break;
+                        }
+                        case 0x09:{
+                            Toast.makeText(getContext(),"错误日志已发送到服务器!", Toast.LENGTH_LONG).show();
+                        }
+                        case 0x10:{
+                            Toast.makeText(getContext(),"错误日志发送失败!", Toast.LENGTH_LONG).show();
+                        }
+                        case 0x11:{
+                            Toast.makeText(getContext(),"进货单已上传到数据中心!", Toast.LENGTH_SHORT).show();
+                        }
+                        case 0x12:{
+                            Toast.makeText(getContext(),"服务器维护中,进货单未上传!", Toast.LENGTH_SHORT).show();
                         }
                     }
                 }
@@ -580,9 +636,9 @@ public class DashboardFragment extends Fragment {
         ToastUtil.showShortToast("修改成功！");
     }
 
-    //异步加载进货单图片
+    //异步加载进货单略缩图
     private void asynchronousLoadPurImgs(Context context, final LinearLayout table, final ArrayList<PurchaseOrder> purOrderList){
-        final String cachePath = CommonUtils.getDiskCachePath(context);
+        final String cachePath = CommonUtils.getDiskCachePath();
         File[] files = new File(cachePath).listFiles();
         final ArrayList<String> cacheList=new ArrayList<>();
         if (files!=null){
@@ -598,19 +654,32 @@ public class DashboardFragment extends Fragment {
                     PurchaseOrder pur = purOrderList.get(i);
                     if (pur==null){compImgs.add(null);continue;}
                     String imgPath = pur.getCachePath();
-                    Bitmap bitmap;
+                    Bitmap bitmap=null;
                     if (cacheList.contains(imgPath)){
                         bitmap=BitmapFactory.decodeFile(imgPath);
                     }else{
-                        Bitmap temp = BitmapFactory.decodeFile(pur.getDataUri());
-                        bitmap= BitmapUtil.centerSquareScaleBitmap(temp,150);
-                        File file = new File(imgPath);
-                        try {
-                            file.createNewFile();
-                            FileOutputStream fos = new FileOutputStream(file);
+                        File file = new File(pur.getDataUri());
+                        if (!file.exists()){
+                            try {//从服务器获取略缩图
+                                String form="deviceID="+CommonUtils.getDeviceID(context)+"&fileName="+pur.getFileName();
+                                bitmap=BitmapFactory.decodeStream(
+                                        new URL(CommonUtils.SERVERADDRESS+"/getThumbnail?"+form).openStream());
+                            } catch (Exception e) {
+                                System.out.println("服务中心维护中!");
+                                e.printStackTrace();
+                            }
+                        }else{
+                            Bitmap temp = BitmapFactory.decodeFile(pur.getDataUri());
+                            bitmap= BitmapUtil.centerSquareScaleBitmap(temp,150);
+                        }
+                    }
+                    if (bitmap==null)
+                        bitmap=BitmapFactory.decodeResource(getResources(),R.drawable.img_load_failed);
+                    else {
+                        try {//保存到磁盘中
+                            FileOutputStream fos = new FileOutputStream(imgPath);
                             bitmap.compress(Bitmap.CompressFormat.JPEG,20,fos);
-                            fos.flush();
-                            fos.close();
+                            fos.flush();fos.close();
                         } catch (IOException e) {
                             e.printStackTrace();
                         }
@@ -737,23 +806,66 @@ public class DashboardFragment extends Fragment {
         View root= LayoutInflater.from(context).inflate(R.layout.show_bitmap_full, null);
         dialog.getWindow().setContentView(root);
         final ImageView imgV=root.findViewById(R.id.img_fullscreen);
-        final DisplayMetrics metrics = ScreenUtil.getScreenSize(context);
         String uri= purchaseOrder.getDataUri();
-        final Bitmap temp= BitmapFactory.decodeFile(uri);
-        final Bitmap bitmap=BitmapUtil.proportionalScaleBitmap(temp,metrics.widthPixels);
-        imgV.setImageBitmap(bitmap);
-//        imgV.setScaleType(ImageView.ScaleType.FIT_CENTER);
-        final BitmapUtil.CheckZoom check = new BitmapUtil.CheckZoom(false);
-        imgV.setOnTouchListener(new OnDoubleClickListener(new OnDoubleClickListener.DoubleClickCallback() {
+        AtomicReference<Bitmap> origBM = new AtomicReference<>();
+        AtomicReference<Bitmap> pngBM = new AtomicReference<>();
+        final DisplayMetrics metrics = ScreenUtil.getScreenSize(context);
+        dialog.setOnCancelListener(m->{
+            origBM.set(null);pngBM.set(null);
+            System.gc();
+        });
+        @SuppressLint("HandlerLeak")
+        Handler handler = new Handler() {
             @Override
-            public void onDoubleClick() {
-                if (check.isMagnified())
+            public void handleMessage(@NonNull Message msg) {
+                super.handleMessage(msg);
+                if (msg.what==0x00){
+                    Bitmap bitmap = pngBM.get();
                     imgV.setImageBitmap(bitmap);
-                else
-                    imgV.setImageBitmap(BitmapUtil.proportionalScaleBitmap(temp,(int)(metrics.widthPixels*1.62)));
-                check.setMagnified(!check.isMagnified());
+                    Bitmap magnified = BitmapUtil.proportionalScaleBitmap(origBM.get(), (int) (metrics.widthPixels * 1.62));
+                    final BitmapUtil.CheckZoom check = new BitmapUtil.CheckZoom(false);
+                    imgV.setOnTouchListener(new OnDoubleClickListener(() -> {
+                        if (check.isMagnified())
+                            imgV.setImageBitmap(bitmap);
+                        else
+                            imgV.setImageBitmap(magnified);
+                        check.setMagnified(!check.isMagnified());
+                    }));
+                }
+                if (msg.what==0x01){
+                    imgV.setImageResource(R.drawable.img_load_failed);
+                    Toast.makeText(context,"数据中心维护中!\n请稍后再试!", Toast.LENGTH_LONG).show();
+                }
             }
-        }));
+        };
+        new Thread(()->{
+            //磁盘中有原图的temp
+            if (new File(uri).exists()){
+                origBM.set(BitmapFactory.decodeFile(uri));
+                pngBM.set(BitmapUtil.proportionalScaleBitmap(origBM.get(),metrics.widthPixels));
+                handler.sendEmptyMessage(0x00);
+            }else{//从服务器获取原图
+                try {
+                    String form="deviceID="+CommonUtils.getDeviceID(context)+"&fileName="+purchaseOrder.getFileName();
+                    origBM.set(BitmapFactory.decodeStream(
+                            new URL(CommonUtils.SERVERADDRESS+"/getImg?"+form).openStream()));
+                    pngBM.set(BitmapUtil.proportionalScaleBitmap(origBM.get(),metrics.widthPixels));
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    handler.sendEmptyMessage(0x01);
+                    return;
+                }
+                handler.sendEmptyMessage(0x00);
+                //存入磁盘中
+                new Thread(()->{
+                    try {
+                        FileOutputStream fos = new FileOutputStream(purchaseOrder.getDataUri());
+                        origBM.get().compress(Bitmap.CompressFormat.JPEG,50,fos);
+                        fos.flush();fos.close();
+                    }catch (Exception e){e.printStackTrace();}
+                }).start();
+            }
+        }).start();
     }
 
     //查看进货单列表

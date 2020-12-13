@@ -5,6 +5,7 @@ import android.database.sqlite.SQLiteDatabase;
 import android.util.Log;
 
 import com.hongxing.hxs.MainActivity;
+import com.hongxing.hxs.utils.zip.CompressListener;
 import com.hongxing.hxs.utils.zip.ZIPUtils;
 
 import java.io.File;
@@ -88,13 +89,8 @@ public class DBManager {
         }
     }
 
-    public static boolean exportDBFileToDir(String pathPrefix){
-        try {
-            String zipFilePath=pathPrefix+"备份.zip";
-            ZIPUtils.compress(MainActivity.APPStoragePath,zipFilePath);
-            return true;
-        }catch (Exception e){
-            return false;
-        }
+    public static void exportDBFileToDir(String pathPrefix, CompressListener listener){
+        String zipFilePath=pathPrefix+"备份.zip";
+        ZIPUtils.compress(MainActivity.APPStoragePath,zipFilePath,listener);
     }
 }

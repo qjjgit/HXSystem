@@ -1,6 +1,6 @@
 package com.hongxing.hxs.utils.zip;
 
-public interface ZipListener {
+public interface UnzipListener {
     /** 开始解压 */
     void zipStart();
     /** 解压成功 */

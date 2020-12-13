@@ -1,5 +1,10 @@
 package com.hongxing.hxs.utils.http;
 
+import android.graphics.BitmapFactory;
+
+import com.hongxing.hxs.MainActivity;
+import com.hongxing.hxs.utils.zip.ZIPUtils;
+
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
@@ -20,6 +25,7 @@ public class HttpThread extends Thread{
     final static int POST = 1;
     private final static int UPLOAD = 2;
     private final static int DOWNLOAD = 3;
+    final static int UPLOADIMG = 4;
     private String url;
     private HttpUtils.Listener listener;
     private Map<String,String> form;
@@ -29,7 +35,6 @@ public class HttpThread extends Thread{
     private int requestMethod;
     private HttpURLConnection connection;
     private BufferedReader bufferedReader;
-    private PrintWriter printWriter;
 
     HttpThread(String url, HttpUtils.Listener listener, String filePath) {
         this.url = url;
@@ -37,6 +42,13 @@ public class HttpThread extends Thread{
         this.requestMethod=POST;
         this.file = new File(filePath);
         this.fileAction=UPLOAD;
+    }
+    HttpThread(String url, HttpUtils.Listener listener, String filePath,int fileAction) {
+        this.url = url;
+        this.listener = listener;
+        this.requestMethod=POST;
+        this.file = new File(filePath);
+        this.fileAction=fileAction;
     }
     HttpThread(String url, HttpUtils.DownloadListener listener,Map<String, String> form, String filePath,long dataLength) {
         this.url = url;
@@ -75,14 +87,14 @@ public class HttpThread extends Thread{
             connection.setRequestMethod("GET");
             connection.setDoInput(true);
             connection.setDoOutput(false);
-            connection.setConnectTimeout(10000);
+            connection.setConnectTimeout(3000);
             connection.setReadTimeout(3000);
             connection.connect();
             int code = connection.getResponseCode();
             if (code ==200) listener.success(getResponse());
-            else listener.error("responseCode "+code);
-        } catch (Exception e) {e.printStackTrace();
-            listener.error(e.getMessage());
+            else listener.error(new Exception("responseCode "+code));
+        } catch (Exception e) {
+            listener.error(e);
         }finally {
             try {
                 if (connection!=null)connection.disconnect();
@@ -97,7 +109,7 @@ public class HttpThread extends Thread{
         connection.setDoInput(true);
         connection.setDoOutput(true);
         connection.setUseCaches(false);
-        connection.setConnectTimeout(10000);
+        connection.setConnectTimeout(5000);
         connection.setReadTimeout(5000);
 //        connection.setRequestProperty("Content-Type", "multipart/form-data" + ";boundary=" + BOUNDARY);
 //            connection.setRequestProperty("Content-type","application/x-java-serialized-object");
@@ -111,48 +123,64 @@ public class HttpThread extends Thread{
                 PrintWriter writer = new PrintWriter(outputStream);
                 writer.write(formDataConnect());writer.flush();writer.close();
             }
-            if (file!=null&&file.exists()&&fileAction==UPLOAD){
+            if (file!=null&&fileAction==UPLOAD){
+                listener.startFileTransfer();
+                ZIPUtils.compress(MainActivity.APPStoragePath,file.getPath());
+                this.fileSize=file.length();
                 DataOutputStream dos = new DataOutputStream(outputStream);
                 FileInputStream is = new FileInputStream(file);
-                byte[] bytes = new byte[4 * 1024];int len;
-//                long totalBytes = file.length();long curBytes = 0;
+                byte[] bytes = new byte[2*1024 * 1024];int len;
+                long curBytes = 0;
                 while ((len=is.read(bytes))!=-1){
-//                    curBytes += len;
+                    curBytes += len;
                     dos.write(bytes,0,len);
-//                    listener.onProgress(curBytes,1.0d *curBytes/totalBytes);
+                    updateProgress(listener,curBytes);
                 }is.close();
                 dos.flush();dos.close();
             }
+            if (file!=null&&fileAction==UPLOADIMG){
+                DataOutputStream dos = new DataOutputStream(outputStream);
+                FileInputStream is = new FileInputStream(file);
+                byte[] bytes = new byte[2*1024 * 1024];int len;
+                while ((len=is.read(bytes))!=-1){
+                    dos.write(bytes,0,len);
+                }is.close();dos.flush();dos.close();
+            }
             if (connection.getResponseCode()==200) {
                 if (fileAction==DOWNLOAD){
-                    if (!file.exists())file.createNewFile();
-                    byte[] bytes = new byte[8 * 1024];int len;
+                    listener.startFileTransfer();
+                    File parent = file.getParentFile();
+                    if (!parent.exists())parent.mkdirs();
+                    if (!file.exists()){if (file.createNewFile()) System.out.println("create temp.zip");else
+                        System.out.println("not create temp.zip");}
+                    byte[] bytes = new byte[2* 1024 * 1024];int len;
                     BufferedInputStream bin = new BufferedInputStream(connection.getInputStream());
                     BufferedOutputStream bos = new BufferedOutputStream(new FileOutputStream(file));
-                    HttpUtils.DownloadListener l = (HttpUtils.DownloadListener) listener;
-                    l.startDownload();long curBytes = 0;
+                    long curBytes = 0;
                     while ((len=bin.read(bytes))!=-1){
                         curBytes+=len;
                         bos.write(bytes,0,len);
-                        updateProgress(l,curBytes);
+                        updateProgress(listener,curBytes);
                     }bos.flush();bos.close();bin.close();
-                    l.success(file);
+                    ((HttpUtils.DownloadListener) listener).success(file);
+                }else if (fileAction==UPLOAD){
+                    file.delete();
+                    listener.success("response:"+getResponse());
                 }else
                 listener.success("response:"+getResponse());
             }
-            else listener.error("responseCode "+connection.getResponseCode());
-        } catch (Exception e) {e.printStackTrace();
-            listener.error(e.getMessage());
+            else listener.error(new Exception("responseCode "+connection.getResponseCode()));
+        } catch (Exception e) {
+            listener.error(e);
         }finally {
             try {
                 if (connection!=null)connection.disconnect();
                 if (bufferedReader!=null)bufferedReader.close();
-                if (printWriter!=null)printWriter.close();
             } catch (IOException ignored) { }
         }
     }
     private int lastProgress = 0;
-    private void updateProgress(HttpUtils.DownloadListener listener,long now){
+    private void updateProgress(HttpUtils.Listener listener,long now){
         int progress = (int) ((now * 100) / fileSize);
         if (progress > lastProgress) {
             lastProgress = progress;
@@ -165,6 +193,7 @@ public class HttpThread extends Thread{
         StringBuilder buffer = new StringBuilder();
         while ((line = bufferedReader.readLine()) != null){
             buffer.append(line);
+            if (line.contains("</title>"))break;
         }
         return String.valueOf(buffer);
     }
@@ -174,7 +203,7 @@ public class HttpThread extends Thread{
      * map -> http[post] 参数
      * @return string
      */
-    private String formDataConnect(){
+    private String formDataConnect() throws Exception {
         StringBuilder sb = new StringBuilder();
         for(String key:form.keySet()){
             if(sb.length() != 0){
@@ -182,10 +211,9 @@ public class HttpThread extends Thread{
                 sb.append("&");
             }
             String v = form.get(key);
-            if ("deviceID".equals(key)&&v==null)throw new RuntimeException("设备异常!无法查询设备id");
+            if ("deviceID".equals(key)&&v==null)throw new Exception("设备异常!无法查询设备id");
             sb.append(key).append("=").append(v);
         }
-        System.out.println(sb.toString());
         return sb.toString();
     }
 }

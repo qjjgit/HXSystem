@@ -25,6 +25,17 @@ public class CrudService {
         db.execSQL(sql);
     }
 
+    public String getDeviceID(){
+        String sql="select deviceID from system";
+        Cursor cursor = db.rawQuery(sql, null);
+        cursor.moveToNext();
+        return cursor.getString(cursor.getColumnIndex("deviceID"));
+    }
+    public void saveDeviceID(String id){
+        String sql="update system set deviceID=\""+id+"\"";
+        db.execSQL(sql);
+    }
+
     //增加数据的方法
     public void saveGoods(Goods goods){
 //        SQLiteDatabase db= DBManager.openDatabase()//获取数据实体//写方法//会判断是否数据库已经满了
@@ -171,15 +182,15 @@ public class CrudService {
         try {
             String sql0="delete from goods_pur_o where pur_id=\""+purOrderId+"\"";
             db.execSQL(sql0);//先清除旧数据
-                //相同的goods name都绑定同一个进货单
-                for (String name : nameList) {
-                    String sql1="select id from goodsdata where name=\""+name+"\"";
-                    Cursor cursor= db.rawQuery(sql1,null);
-                    while(cursor.moveToNext()){
-                        int id =cursor.getInt(cursor.getColumnIndex("id"));
-                        String sql="insert into goods_pur_o('goods_id','pur_id') values(?,\""+purOrderId+"\")";
-                        db.execSQL(sql,new Object[]{id});
-                    }
+            //相同的goods name都绑定同一个进货单
+            for (String name : nameList) {
+                String sql1="select id from goodsdata where name=\""+name+"\"";
+                Cursor cursor= db.rawQuery(sql1,null);
+                while(cursor.moveToNext()){
+                    int id =cursor.getInt(cursor.getColumnIndex("id"));
+                    String sql="insert into goods_pur_o('goods_id','pur_id') values(?,\""+purOrderId+"\")";
+                    db.execSQL(sql,new Object[]{id});
+                }
             }
             db.setTransactionSuccessful();
             return true;

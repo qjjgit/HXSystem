@@ -22,8 +22,15 @@ public class PurchaseOrder {
         this.data_uri = data_uri;
     }
 
+    public PurchaseOrder(String id, String supplier, String date) {
+        this.id = id;
+        this.supplier = supplier;
+        this.date = date;
+        this.data_uri=MainActivity.APPStoragePath+"/PurchaseOrder/"+getFileName();
+    }
+
     public String getCachePath(){
-        return CommonUtils.getDiskCachePath(MainActivity.getMainContext())
+        return CommonUtils.getDiskCachePath()
                 + File.separator+getShorterId()+".jpg";
     }
 
@@ -80,4 +87,6 @@ public class PurchaseOrder {
     public void setDataUri(String data_uri) {
         this.data_uri = data_uri;
     }
+
+    public String getFileName(){return supplier+date+".jpg";}
 }

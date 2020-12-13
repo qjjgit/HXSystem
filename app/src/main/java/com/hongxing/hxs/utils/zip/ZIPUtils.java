@@ -14,6 +14,24 @@ public class ZIPUtils {
      * @param srcFilePath 压缩源路径
      * @param destFilePath 压缩目的路径
      */
+    public static void compress(String srcFilePath, String destFilePath,CompressListener listener) {
+        new Thread(()->{
+            try {
+                File src = new File(srcFilePath);
+                if (!src.exists()) {
+                    throw new RuntimeException(srcFilePath + "不存在");
+                }
+                listener.zipStart();
+                File zipFile = new File(destFilePath);
+                FileOutputStream fos = new FileOutputStream(zipFile);
+                ZipOutputStream zos = new ZipOutputStream(fos);
+                String baseDir = "";
+                compressByType(src, zos, baseDir);
+                zos.close();
+                listener.zipSuccess();
+            }catch (Exception e){e.printStackTrace();listener.zipFail();}
+        }).start();
+    }
     public static void compress(String srcFilePath, String destFilePath) throws IOException {
         File src = new File(srcFilePath);
         if (!src.exists()) {
@@ -83,7 +101,7 @@ public class ZIPUtils {
      * @param listener
      *      加压监听
      */
-    public static void unzipFile(final String zipFileString, final String outPathString, final ZipListener listener) {
+    public static void unzipFile(final String zipFileString, final String outPathString, final UnzipListener listener) {
         Thread zipThread = new UnzipMainThread(zipFileString, outPathString, listener);
         zipThread.start();
     }
