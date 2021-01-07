@@ -61,6 +61,7 @@ import com.hongxing.hxs.utils.http.HttpUtils;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.net.HttpURLConnection;
 import java.net.URL;
 import java.text.Collator;
 import java.text.ParseException;
@@ -244,16 +245,14 @@ public class DashboardFragment extends Fragment {
                 fos.flush();fos.close();
                 //原图较大,压缩原图后保存到磁盘中
                 Bitmap bitmap = BitmapFactory.decodeFile(MainActivity.showPIC.getPath());
-                String fileName=purchaseOrder.getFileName();
                 File file2 = new File(purchaseOrder.getDataUri());
                 FileOutputStream outputStream = new FileOutputStream(file2);
                 bitmap.compress(Bitmap.CompressFormat.JPEG,50,outputStream);
                 outputStream.flush();outputStream.close();bitmap.recycle();
                 MainActivity.showPIC.delete();
                 MainActivity.showPIC=file2;
-                HashMap<String,String> map=new HashMap<>();
-                map.put("deviceID",CommonUtils.getDeviceID(context));map.put("fileName",fileName);
-                HttpUtils.uploadImg(map, file2, new HttpUtils.Listener() {
+                //上传到服务器
+                HttpUtils.uploadImg(file2, new HttpUtils.Listener() {
                     @Override
                     public void startFileTransfer() { }
                     @Override
@@ -261,21 +260,17 @@ public class DashboardFragment extends Fragment {
                         uiHandler.sendEmptyMessage(0x11);
                     }
                     @Override
-                    public void progress(int progress) { }
-                    @Override
                     public void error(Exception e) {
                         if (e.getMessage().startsWith("responseCode"))
                             uiHandler.sendEmptyMessage(0x12);
                         else
-                        HttpUtils.sendErrorLog(context,e.getMessage(), new HttpUtils.Listener() {
+                        HttpUtils.sendErrorLog(e.getMessage(), new HttpUtils.Listener() {
                             @Override
                             public void startFileTransfer() { }
                             @Override
                             public void success(String response) {
                                 uiHandler.sendEmptyMessage(0x09);
                             }
-                            @Override
-                            public void progress(int progress) { }
                             @Override
                             public void error(Exception e) {
                                 uiHandler.sendEmptyMessage(0x10);
@@ -660,14 +655,17 @@ public class DashboardFragment extends Fragment {
                     }else{
                         File file = new File(pur.getDataUri());
                         if (!file.exists()){
+                            HttpURLConnection connection=null;
                             try {//从服务器获取略缩图
-                                String form="deviceID="+CommonUtils.getDeviceID(context)+"&fileName="+pur.getFileName();
-                                bitmap=BitmapFactory.decodeStream(
-                                        new URL(CommonUtils.SERVERADDRESS+"/getThumbnail?"+form).openStream());
+                                String form="fileName="+pur.getFileName();
+                                connection = HttpUtils.getDoGetConnection(
+                                        new URL(CommonUtils.SERVERADDRESS + "/getThumbnail?" + form));
+                                if (connection.getResponseCode()==200)
+                                    bitmap=BitmapFactory.decodeStream(connection.getInputStream());
                             } catch (Exception e) {
                                 System.out.println("服务中心维护中!");
                                 e.printStackTrace();
-                            }
+                            }finally { if (connection!=null)connection.disconnect(); }
                         }else{
                             Bitmap temp = BitmapFactory.decodeFile(pur.getDataUri());
                             bitmap= BitmapUtil.centerSquareScaleBitmap(temp,150);
@@ -836,6 +834,10 @@ public class DashboardFragment extends Fragment {
                     imgV.setImageResource(R.drawable.img_load_failed);
                     Toast.makeText(context,"数据中心维护中!\n请稍后再试!", Toast.LENGTH_LONG).show();
                 }
+                if (msg.what==0x02){
+                    imgV.setImageResource(R.drawable.img_load_failed);
+                    Toast.makeText(context,"数据中心没有对应进货单!", Toast.LENGTH_LONG).show();
+                }
             }
         };
         new Thread(()->{
@@ -845,14 +847,24 @@ public class DashboardFragment extends Fragment {
                 pngBM.set(BitmapUtil.proportionalScaleBitmap(origBM.get(),metrics.widthPixels));
                 handler.sendEmptyMessage(0x00);
             }else{//从服务器获取原图
+                HttpURLConnection connection=null;
                 try {
-                    String form="deviceID="+CommonUtils.getDeviceID(context)+"&fileName="+purchaseOrder.getFileName();
-                    origBM.set(BitmapFactory.decodeStream(
-                            new URL(CommonUtils.SERVERADDRESS+"/getImg?"+form).openStream()));
-                    pngBM.set(BitmapUtil.proportionalScaleBitmap(origBM.get(),metrics.widthPixels));
+                    String form="fileName="+purchaseOrder.getFileName();
+                    connection = HttpUtils.getDoGetConnection(
+                            new URL(CommonUtils.SERVERADDRESS + "/getImg?" + form));
+                    if (connection.getResponseCode()==200){
+                        origBM.set(BitmapFactory.decodeStream(connection.getInputStream()));
+                        pngBM.set(BitmapUtil.proportionalScaleBitmap(origBM.get(),metrics.widthPixels));
+                    }
+//                    origBM.set(BitmapFactory.decodeStream(
+//                            new URL(CommonUtils.SERVERADDRESS+"/getImg?"+form).openStream()));
                 } catch (IOException e) {
-                    e.printStackTrace();
                     handler.sendEmptyMessage(0x01);
+                    e.printStackTrace();
+                    return;
+                }finally {if (connection!=null)connection.disconnect();}
+                if (origBM.get()==null||pngBM.get()==null){
+                    handler.sendEmptyMessage(0x02);
                     return;
                 }
                 handler.sendEmptyMessage(0x00);

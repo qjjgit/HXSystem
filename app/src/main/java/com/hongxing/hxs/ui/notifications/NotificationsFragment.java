@@ -48,7 +48,6 @@ import static android.app.Activity.RESULT_OK;
 
 public class NotificationsFragment extends Fragment {
 
-    private NotificationsViewModel notificationsViewModel;
     private TextView lastBackup;
     private Handler handler;
     private ProgressDialog progressDialog;
@@ -56,8 +55,6 @@ public class NotificationsFragment extends Fragment {
     @SuppressLint("HandlerLeak")
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container, Bundle savedInstanceState) {
-        notificationsViewModel =
-                ViewModelProviders.of(this).get(NotificationsViewModel.class);
         View root = inflater.inflate(R.layout.fragment_notifications, container, false);
         final Context context = getContext();
         progressDialog = new ProgressDialog(context);
@@ -65,7 +62,7 @@ public class NotificationsFragment extends Fragment {
             @Override
             public void handleMessage(@NonNull Message msg) {
                 super.handleMessage(msg);
-                //上传初始化
+                //上传初始化 not used
                 if (msg.what==0x05){
                     progressDialog.setProgress(0);
                     progressDialog.setCancelable(false);
@@ -75,7 +72,7 @@ public class NotificationsFragment extends Fragment {
                     progressDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
                     progressDialog.show();
                 }
-                //下载初始化
+                //下载初始化 not used
                 if (msg.what==0x12){
                     progressDialog.setProgress(0);
                     progressDialog.setCancelable(false);
@@ -113,13 +110,13 @@ public class NotificationsFragment extends Fragment {
                     progressDialog.cancel();
                     progressDialog.setProgress(0);
                 }
-                //下载数据成功，开始解压
+                //下载数据成功，开始解压 not used
                 if (msg.what==0x09){
                     Toast.makeText(context, "数据获取完成，开始导入!", Toast.LENGTH_SHORT).show();
                     progressDialog.cancel();
                     progressDialog.setProgress(0);
                 }
-                //下载失败
+                //下载失败 not used
                 if (msg.what==0x11){
                     Bundle data = msg.getData();
                     String response = data.getString("response");
@@ -127,7 +124,7 @@ public class NotificationsFragment extends Fragment {
                     progressDialog.cancel();
                     progressDialog.setProgress(0);
                 }
-                //上传成功
+                //上传成功 not used
                 if (msg.what==0x13){
                     Bundle data = msg.getData();
                     String response = data.getString("response");
@@ -135,7 +132,7 @@ public class NotificationsFragment extends Fragment {
                     progressDialog.cancel();
                     progressDialog.setProgress(0);
                 }
-                //上传失败
+                //上传失败 not used
                 if (msg.what==0x10){
                     Bundle data = msg.getData();
                     String response = data.getString("response");
@@ -163,15 +160,50 @@ public class NotificationsFragment extends Fragment {
                     Toast.makeText(context,"备份失败", Toast.LENGTH_LONG).show();
                     progressDialog.cancel();
                 }
+                //云备份成功
+                if(msg.what==0x18){
+                    String date = (String) msg.obj;
+                    lastBackup.setText(("上一次备份："+date));
+                    Toast.makeText(context,"已备份到数据中心", Toast.LENGTH_LONG).show();
+                    progressDialog.cancel();
+                }
+                //云备份失败
+                if(msg.what==0x19){
+                    String error = (String) msg.obj;
+                    Toast.makeText(context,"备份失败 msg:"+error, Toast.LENGTH_LONG).show();
+                    progressDialog.cancel();
+                }
+                //获取db文件成功
+                if(msg.what==0x20){
+//                    String response = (String) msg.obj;
+                    Toast.makeText(context,"成功!", Toast.LENGTH_LONG).show();
+                    progressDialog.cancel();
+                }
+                //获取db文件失败
+                if(msg.what==0x21){
+                    String error = (String) msg.obj;
+                    Toast.makeText(context,"失败! "+error, Toast.LENGTH_LONG).show();
+                    progressDialog.cancel();
+                }
+                //与数据中心同步成功
+                if(msg.what==0x22){
+//                    String response = (String) msg.obj;
+                    Toast.makeText(context,"与数据中心同步完成!", Toast.LENGTH_LONG).show();
+                    progressDialog.cancel();
+                }
+                //与数据中心同步失败
+                if(msg.what==0x23){
+                    String error = (String) msg.obj;
+                    Toast.makeText(context,"同步失败! "+error, Toast.LENGTH_LONG).show();
+                    progressDialog.cancel();
+                }
             }
         };
         setClick(root);
         lastBackup = root.findViewById(R.id.text_lastBackup);
-        notificationsViewModel.getText().observe(this, s -> {
-            CrudService service = new CrudService(getContext());
-            String date = service.getLastBackup();service.close();
-            lastBackup.append(date);
-        });
+        CrudService service = new CrudService(getContext());
+        String date = service.getLastBackup();service.close();
+        lastBackup.append(date);
         return root;
     }
 
@@ -179,6 +211,7 @@ public class NotificationsFragment extends Fragment {
         final Context context = getContext();
         final String strdir = CommonUtils.getBackupPath();
         SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd.HH.mm", Locale.CHINA);
+        //做备份
         view.findViewById(R.id.btn_exportData).setOnClickListener(v -> {
             try {
                 Date date = format.parse(lastBackup.getText().toString().replace("上一次备份：", ""));
@@ -191,42 +224,107 @@ public class NotificationsFragment extends Fragment {
             } catch (ParseException e) {
                 e.printStackTrace();
             }
-            File file = new File(strdir);
-            if (!file.exists()) file.mkdir();
             String date = format.format(new Date());
-            DBManager.exportDBFileToDir(strdir+File.separator+"鸿兴系统"+date,new CompressListener() {
-                @Override
-                public void zipStart() {
-                    handler.sendEmptyMessage(0x15);
-                }
-                @Override
-                public void zipSuccess() {
-                    CrudService service = new CrudService(context);
-                    service.setLastBackup(date);
-                    service.close();
-                    Message msg = new Message();
-                    msg.obj=date;msg.what=0x16;
-                    handler.sendMessage(msg);
-                }
-                @Override
-                public void zipFail() {
-                    handler.sendEmptyMessage(0x17);
-                }
+            final AlertDialog.Builder alterDialog = new AlertDialog.Builder(context);
+            alterDialog.setCancelable(true);
+            alterDialog.setIcon(R.drawable.data_ico32);//图标
+            alterDialog.setTitle("请选择");//文字
+            alterDialog.setPositiveButton("备份到本地", (dialog, which) ->{
+                DBManager.exportDBFileToDir(strdir+File.separator+"鸿兴系统"+date,new CompressListener() {
+                    @Override
+                    public void zipStart() {
+                        handler.sendEmptyMessage(0x15);
+                    }
+                    @Override
+                    public void zipSuccess() {
+                        CrudService service = new CrudService(context);
+                        service.setLastBackup(date);
+                        service.close();
+                        Message msg = new Message();
+                        msg.obj=date;msg.what=0x16;
+                        handler.sendMessage(msg);
+                    }
+                    @Override
+                    public void zipFail() {
+                        handler.sendEmptyMessage(0x17);
+                    }
+                });
             });
+            alterDialog.setNegativeButton("备份到数据中心",(dialog, which) ->{
+                HttpUtils.uploadDBFile(new HttpUtils.Listener() {
+                    @Override
+                    public void startFileTransfer() {
+                        System.out.println("开始备份");
+                    }
+                    @Override
+                    public void success(String response) {
+                        System.out.println(response);
+                        CrudService service = new CrudService(context);
+                        service.setLastBackup(date);
+                        service.close();
+                        Message msg = new Message();
+                        msg.obj=date;msg.what=0x18;
+                        handler.sendMessage(msg);
+                    }
+                    @Override
+                    public void error(Exception e) {
+                        Message msg = new Message();
+                        msg.obj=e.getMessage();msg.what=0x19;
+                        handler.sendMessage(msg);
+                    }
+                });
+            });
+            alterDialog.setNeutralButton("取消",(dialog,which)->{});
+            alterDialog.show();
         });
+        //导入数据
         view.findViewById(R.id.btn_importData).setOnClickListener(v -> {
-            Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
-            intent.addCategory(Intent.CATEGORY_DEFAULT);
-            File file = new File(strdir);
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                intent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                Uri uri = FileProvider.getUriForFile(context, getActivity().getPackageName()+".fileprovider", file);
-                intent.setDataAndType(uri, "application/zip");
-            } else {
-                intent.setDataAndType(Uri.fromFile(file), "application/zip");
-            }
-            startActivityForResult(intent,0x04);
+            final AlertDialog.Builder alterDialog = new AlertDialog.Builder(context);
+            alterDialog.setCancelable(true);
+            alterDialog.setIcon(R.drawable.data_ico32);//图标
+            alterDialog.setTitle("请选择");//文字
+            //积极的选择
+            alterDialog.setPositiveButton("选择本地备份", (dialog, which) -> {
+                Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+                intent.addCategory(Intent.CATEGORY_DEFAULT);
+                File file = new File(strdir);
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                    intent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                    Uri uri = FileProvider.getUriForFile(context, getActivity().getPackageName()+".fileprovider", file);
+                    intent.setDataAndType(uri, "application/zip");
+                } else {
+                    intent.setDataAndType(Uri.fromFile(file), "application/zip");
+                }
+                startActivityForResult(intent,0x04);
+            });
+            //消极的选择
+            alterDialog.setNegativeButton("获取云备份",(dialog, which) -> {
+                HttpUtils.downloadFile(HttpUtils.fromSELF,new HttpUtils.Listener() {
+                    @Override
+                    public void startFileTransfer() {
+                        System.out.println("开始下载自己的db文件");
+                    }
+                    @Override
+                    public void success(String response) {
+                        Message msg = new Message();
+                        msg.obj=response;msg.what=0x20;
+                        handler.sendMessage(msg);
+                    }
+                    @Override
+                    public void error(Exception e) {
+                        Message msg = new Message();
+                        msg.obj=e.getMessage();msg.what=0x21;
+                        handler.sendMessage(msg);
+                    }
+                });
+            });
+            //中立
+            alterDialog.setNeutralButton("取消",(dialog,which)->{});
+            alterDialog.show();
+
+
         });
+        //测试与服务器连接
         view.findViewById(R.id.doGetBtn).setOnClickListener(m -> {
             HttpUtils.doGet(null, new HttpUtils.Listener() {
                 @Override
@@ -240,93 +338,71 @@ public class NotificationsFragment extends Fragment {
                     Looper.loop();
                 }
                 @Override
-                public void progress(int progress) { }
-                @Override
                 public void error(Exception e) {
-                    e.printStackTrace();
                     Looper.prepare();
                     ToastUtil.showShortToast("数据中心维护中!");
                     Looper.loop();
                 }
             });
         });
-        view.findViewById(R.id.doUploadBtn).setOnClickListener(a->{
-            Map<String, String> map = new HashMap<>();
-            String id = CommonUtils.getDeviceID(context);
-            System.out.println(id);
-            map.put("deviceID",id);map.put("date","2020-10-23 21.30");
-            HttpUtils.uploadFile(map, new HttpUtils.Listener() {
+        //同步
+        View syncBtn = view.findViewById(R.id.doDownloadBtn);
+        if (!MainActivity.isAdmin)
+            syncBtn.setOnClickListener(a->{
+            HttpUtils.downloadFile(HttpUtils.fromADMIN,new HttpUtils.Listener() {
                 @Override
                 public void startFileTransfer() {
-                    handler.sendEmptyMessage(0x05);
+                    System.out.println("开始下载");
                 }
                 @Override
                 public void success(String response) {
-                    System.out.println("response：\n"+response);
-                    Bundle bundle = new Bundle();
-                    bundle.putString("response", response);
                     Message msg = new Message();
-                    msg.what =0x13;
-                    msg.setData(bundle);
-                    handler.sendMessage(msg);
-                }
-                @Override
-                public void progress(int progress) {
-                    Bundle bundle = new Bundle();
-                    bundle.putInt("progress", progress);
-                    Message msg = new Message();
-                    msg.what =0x07;
-                    msg.setData(bundle);
+                    msg.obj=response;msg.what=0x22;
                     handler.sendMessage(msg);
                 }
                 @Override
                 public void error(Exception e) {
-                    Bundle bundle = new Bundle();
-                    bundle.putString("response", e.getMessage());
                     Message msg = new Message();
-                    msg.what =0x10;
-                    msg.setData(bundle);
-                    handler.sendMessage(msg);
-                    e.printStackTrace();
-                }
-            });
-        });
-        view.findViewById(R.id.doDownloadBtn).setOnClickListener(a->{
-            HttpUtils.downloadFile(new HttpUtils.DownloadListener() {
-                @Override
-                public void startFileTransfer() {
-                    handler.sendEmptyMessage(0x12);
-                }
-                @Override
-                public void progress(int progress) {
-                    Bundle bundle = new Bundle();
-                    bundle.putInt("progress", progress);
-                    Message msg = new Message();
-                    msg.what =0x07;
-                    msg.setData(bundle);
-                    handler.sendMessage(msg);
-                }
-                @Override
-                public void success(File file) {
-                    handler.sendEmptyMessage(0x09);
-                    unzipFileToAPPStoragePath(file.getPath());
-                }
-                @Override
-                public void success(String response) {
-
-                }
-                @Override
-                public void error(Exception e) {
-                    e.printStackTrace();
-                    Bundle bundle = new Bundle();
-                    bundle.putString("response", e.getMessage());
-                    Message msg = new Message();
-                    msg.what =0x11;
-                    msg.setData(bundle);
+                    msg.obj=e.getMessage();msg.what=0x23;
                     handler.sendMessage(msg);
                 }
             });
+//            HttpUtils.downloadFile(new HttpUtils.DownloadListener() {
+//                @Override
+//                public void startFileTransfer() {
+//                    handler.sendEmptyMessage(0x12);
+//                }
+//                @Override
+//                public void progress(int progress) {
+//                    Bundle bundle = new Bundle();
+//                    bundle.putInt("progress", progress);
+//                    Message msg = new Message();
+//                    msg.what =0x07;
+//                    msg.setData(bundle);
+//                    handler.sendMessage(msg);
+//                }
+//                @Override
+//                public void success(File file) {
+//                    handler.sendEmptyMessage(0x09);
+//                    unzipFileToAPPStoragePath(file.getPath());
+//                }
+//                @Override
+//                public void success(String response) {
+//
+//                }
+//                @Override
+//                public void error(Exception e) {
+//                    e.printStackTrace();
+//                    Bundle bundle = new Bundle();
+//                    bundle.putString("response", e.getMessage());
+//                    Message msg = new Message();
+//                    msg.what =0x11;
+//                    msg.setData(bundle);
+//                    handler.sendMessage(msg);
+//                }
+//            });
         });
+        else syncBtn.setEnabled(false);
     }
 
     @Override
@@ -368,7 +444,6 @@ public class NotificationsFragment extends Fragment {
             }
             @Override
             public void zipSuccess() {
-                new File(filePath).delete();
                 handler.sendEmptyMessage(0x06);
             }
             @Override

@@ -1,9 +1,7 @@
 package com.hongxing.hxs.utils.http;
 
-import android.graphics.BitmapFactory;
-
 import com.hongxing.hxs.MainActivity;
-import com.hongxing.hxs.utils.zip.ZIPUtils;
+import com.hongxing.hxs.utils.CommonUtils;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -24,40 +22,37 @@ public class HttpThread extends Thread{
     final static int GET = 0;
     final static int POST = 1;
     private final static int UPLOAD = 2;
-    private final static int DOWNLOAD = 3;
-    final static int UPLOADIMG = 4;
+    private final static int DOWNLOAD_dbFile = 3;
+    final static int DOWNLOAD_otherFile = 4;
     private String url;
     private HttpUtils.Listener listener;
     private Map<String,String> form;
     private File file;
-    private long fileSize;
     private int fileAction=0;
     private int requestMethod;
     private HttpURLConnection connection;
     private BufferedReader bufferedReader;
 
+    HttpThread(String url, HttpUtils.Listener listener, File file) {
+        this.url = url;
+        this.listener = listener;
+        this.requestMethod=POST;
+        this.file = file;
+        this.fileAction=UPLOAD;
+    }
     HttpThread(String url, HttpUtils.Listener listener, String filePath) {
         this.url = url;
         this.listener = listener;
         this.requestMethod=POST;
         this.file = new File(filePath);
-        this.fileAction=UPLOAD;
+        this.fileAction=DOWNLOAD_dbFile;
     }
-    HttpThread(String url, HttpUtils.Listener listener, String filePath,int fileAction) {
+    HttpThread(String url, HttpUtils.Listener listener, String filePath,int action) {
         this.url = url;
         this.listener = listener;
         this.requestMethod=POST;
         this.file = new File(filePath);
-        this.fileAction=fileAction;
-    }
-    HttpThread(String url, HttpUtils.DownloadListener listener,Map<String, String> form, String filePath,long dataLength) {
-        this.url = url;
-        this.listener = listener;
-        this.form=form;
-        this.requestMethod=POST;
-        this.file = new File(filePath);
-        this.fileSize=dataLength;
-        this.fileAction=DOWNLOAD;
+        this.fileAction=action;
     }
     HttpThread(String url, HttpUtils.Listener listener) {
         this.url = url;
@@ -111,8 +106,10 @@ public class HttpThread extends Thread{
         connection.setUseCaches(false);
         connection.setConnectTimeout(5000);
         connection.setReadTimeout(5000);
-//        connection.setRequestProperty("Content-Type", "multipart/form-data" + ";boundary=" + BOUNDARY);
-//            connection.setRequestProperty("Content-type","application/x-java-serialized-object");
+        connection.setRequestProperty("deviceID", CommonUtils.getDeviceID());
+        if (fileAction==UPLOAD&&file!=null){
+            connection.setRequestProperty("fileName",file.getName());
+        }
     }
     private void doPost(){
         try {
@@ -124,52 +121,35 @@ public class HttpThread extends Thread{
                 writer.write(formDataConnect());writer.flush();writer.close();
             }
             if (file!=null&&fileAction==UPLOAD){
-                listener.startFileTransfer();
-                ZIPUtils.compress(MainActivity.APPStoragePath,file.getPath());
-                this.fileSize=file.length();
                 DataOutputStream dos = new DataOutputStream(outputStream);
                 FileInputStream is = new FileInputStream(file);
-                byte[] bytes = new byte[2*1024 * 1024];int len;
-                long curBytes = 0;
-                while ((len=is.read(bytes))!=-1){
-                    curBytes += len;
-                    dos.write(bytes,0,len);
-                    updateProgress(listener,curBytes);
-                }is.close();
-                dos.flush();dos.close();
-            }
-            if (file!=null&&fileAction==UPLOADIMG){
-                DataOutputStream dos = new DataOutputStream(outputStream);
-                FileInputStream is = new FileInputStream(file);
-                byte[] bytes = new byte[2*1024 * 1024];int len;
+                byte[] bytes = new byte[512*1024];int len;
                 while ((len=is.read(bytes))!=-1){
                     dos.write(bytes,0,len);
                 }is.close();dos.flush();dos.close();
             }
-            if (connection.getResponseCode()==200) {
-                if (fileAction==DOWNLOAD){
+            int responseCode = connection.getResponseCode();
+            if (responseCode ==200) {
+                if (fileAction==DOWNLOAD_dbFile||fileAction==DOWNLOAD_otherFile){
                     listener.startFileTransfer();
-                    File parent = file.getParentFile();
-                    if (!parent.exists())parent.mkdirs();
-                    if (!file.exists()){if (file.createNewFile()) System.out.println("create temp.zip");else
-                        System.out.println("not create temp.zip");}
-                    byte[] bytes = new byte[2* 1024 * 1024];int len;
+                    byte[] bytes = new byte[16 * 1024];int len;
                     BufferedInputStream bin = new BufferedInputStream(connection.getInputStream());
                     BufferedOutputStream bos = new BufferedOutputStream(new FileOutputStream(file));
-                    long curBytes = 0;
                     while ((len=bin.read(bytes))!=-1){
-                        curBytes+=len;
                         bos.write(bytes,0,len);
-                        updateProgress(listener,curBytes);
                     }bos.flush();bos.close();bin.close();
-                    ((HttpUtils.DownloadListener) listener).success(file);
-                }else if (fileAction==UPLOAD){
-                    file.delete();
-                    listener.success("response:"+getResponse());
-                }else
-                listener.success("response:"+getResponse());
+                    if (fileAction==DOWNLOAD_dbFile){
+                        File db = new File(MainActivity.APPStoragePath + "/databases/hxs.s3db");
+                        if (db.delete()) file.renameTo(db);
+                        listener.success("同步完成!");
+                    }else listener.success("getADImagesURLListFile ok");
+                }else listener.success("response:"+getResponse());
+            }else if(responseCode==205){
+                String msg = connection.getHeaderField("msg");
+                if ("no backup".equals(msg))msg="您未进行过备份";
+                listener.error(new Exception(msg));
             }
-            else listener.error(new Exception("responseCode "+connection.getResponseCode()));
+            else listener.error(new Exception("responseCode "+ responseCode));
         } catch (Exception e) {
             listener.error(e);
         }finally {
@@ -177,14 +157,6 @@ public class HttpThread extends Thread{
                 if (connection!=null)connection.disconnect();
                 if (bufferedReader!=null)bufferedReader.close();
             } catch (IOException ignored) { }
-        }
-    }
-    private int lastProgress = 0;
-    private void updateProgress(HttpUtils.Listener listener,long now){
-        int progress = (int) ((now * 100) / fileSize);
-        if (progress > lastProgress) {
-            lastProgress = progress;
-            listener.progress(progress);
         }
     }
     private String getResponse() throws IOException {

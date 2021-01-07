@@ -1,18 +1,23 @@
 package com.hongxing.hxs.utils.http;
 
-import android.content.Context;
-import android.os.Environment;
-
 import androidx.annotation.NonNull;
 
 import com.hongxing.hxs.MainActivity;
+import com.hongxing.hxs.db.DBManager;
 import com.hongxing.hxs.utils.CommonUtils;
 
 import java.io.File;
+import java.io.IOException;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
 
+import static com.hongxing.hxs.utils.http.HttpThread.DOWNLOAD_otherFile;
+
 public class HttpUtils {
+    public static final int fromSELF=0x00;
+    public static final int fromADMIN=0x01;
 
     public static void doGet(Map<String,String> parameters,@NonNull Listener listener){
         new HttpThread(CommonUtils.SERVERADDRESS,listener,HttpThread.GET,parameters).start();
@@ -21,111 +26,82 @@ public class HttpUtils {
         new HttpThread(url,listener,HttpThread.POST,form).start();
     }
 
-    public static void sendErrorLog(Context context,@NonNull String content){
+    public static void sendErrorLog(@NonNull String content){
         Map<String,String> map=new HashMap<>();
-        map.put("deviceID",CommonUtils.getDeviceID(context));map.put("content",content);
+        map.put("deviceID",CommonUtils.getDeviceID());map.put("content",content);
         new HttpThread(CommonUtils.SERVERADDRESS + "/sendErrorLog", new Listener() {
             @Override
             public void startFileTransfer() { }
             @Override
             public void success(String response) {System.out.println("send error log ok");}
             @Override
-            public void progress(int progress) { }
-            @Override
             public void error(Exception e) {System.out.println("send error log failed");}
         }, HttpThread.POST, map).start();
     }
-    public static void sendErrorLog(Context context,@NonNull String content,@NonNull Listener listener){
+    public static void sendErrorLog(@NonNull String content,@NonNull Listener listener){
         Map<String,String> map=new HashMap<>();
-        map.put("deviceID",CommonUtils.getDeviceID(context));map.put("content",content);
+        map.put("deviceID",CommonUtils.getDeviceID());map.put("content",content);
         new HttpThread(CommonUtils.SERVERADDRESS+"/sendErrorLog",listener,HttpThread.POST,map).start();
     }
 
-    public static void uploadFile(@NonNull Map<String,String> form,@NonNull Listener listener){
+    public static void uploadDBFile(@NonNull Listener listener){
         String url = CommonUtils.SERVERADDRESS + "/upload";
-        CheckStatus status = new CheckStatus();
-        HttpThread thread = new HttpThread(url, new Listener() {
-            @Override
-            public void startFileTransfer() { }
-            @Override
-            public void success(String response) {
-                status.setOk(true);
-            }
-            @Override
-            public void progress(int progress) { }
-            @Override
-            public void error(Exception e) {
-                status.setError(true);listener.error(e);
-            }
-        }, HttpThread.POST, form);
-        thread.start();
-        while (!status.isOk()&&!status.isError()) { }
-        if (status.isError()) return;
-        String file=CommonUtils.getBackupPath()+File.separator+"upload_temp.zip";
-        new HttpThread(url,listener,file).start();
+        new HttpThread(url,listener,DBManager.db_file).start();
     }
 
-    public static void uploadImg(@NonNull Map<String,String> form,@NonNull File img,@NonNull Listener listener){
+    public static void uploadImg(@NonNull File img,@NonNull Listener listener){
         String url = CommonUtils.SERVERADDRESS + "/uploadImg";
-        CheckStatus status = new CheckStatus();
-        HttpThread thread = new HttpThread(url, new Listener() {
-            @Override
-            public void startFileTransfer() { }
-            @Override
-            public void success(String response) {
-                status.setOk(true);
-            }
-            @Override
-            public void progress(int progress) { }
-            @Override
-            public void error(Exception e) {
-                status.setError(true);listener.error(e);
-            }
-        }, HttpThread.POST, form);
-        thread.start();
-        while (!status.isOk()&&!status.isError()) { }
-        if (status.isError()) return;
-        new HttpThread(url,listener,img.getPath(),HttpThread.UPLOADIMG).start();
+        new HttpThread(url,listener,img).start();
     }
 
-    public static void downloadFile(@NonNull DownloadListener listener){
-        final Context context = MainActivity.getMainContext();
-        Map<String, String> map = new HashMap<String, String>() {{
-            put("deviceID", CommonUtils.getDeviceID(context));
-        }};
+    public static void downloadFile(int from, @NonNull Listener listener){
+        String path=MainActivity.APPStoragePath +"/databases/temp.s3db";
+        String url=CommonUtils.SERVERADDRESS +"/getDBFile_fromAdmin";
+        if (from==fromSELF)url=CommonUtils.SERVERADDRESS +"/getDBFile_fromSelf";
+        new HttpThread(url,
+                listener,path).start();
+    }
+
+    public static HttpURLConnection getDoGetConnection(URL url) throws IOException {
+        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+        connection.setRequestMethod("GET");
+        connection.setDoInput(true);
+        connection.setDoOutput(false);
+        connection.setUseCaches(false);
+        connection.setConnectTimeout(5000);
+        connection.setReadTimeout(5000);
+        connection.setRequestProperty("deviceID", CommonUtils.getDeviceID());
+        connection.connect();
+        return connection;
+    }
+
+    public static boolean isAdmin(){
         CheckStatus status = new CheckStatus();
-        HttpThread thread = new HttpThread(CommonUtils.SERVERADDRESS+"/getBackupFileSize",new Listener(){
+        new HttpThread(CommonUtils.SERVERADDRESS+"/checkAdmin", new Listener() {
             @Override
             public void startFileTransfer() { }
             @Override
-            public void success(String response) {
-                status.setOk(true);
-                status.setResponse(response);
-            }
+            public void success(String response) {status.OK();status.setResponse(response);}
             @Override
-            public void progress(int progress) { }
-            @Override
-            public void error(Exception e) {
-                status.setError(true);System.out.println(e);
-            }
-        },HttpThread.GET,map);
-        thread.start();
-        while (!status.isOk()&&!status.isError()) { }
-        if (status.isError()) return;
-        String path=Environment.getExternalStorageDirectory().getPath()
-                + File.separator + "鸿兴系统"+File.separator+"temp.zip";
-        new HttpThread(CommonUtils.SERVERADDRESS+"/download",
-                listener,map,path,Long.valueOf(status.getResponse())).start();
+            public void error(Exception e) { status.ERROR();e.printStackTrace(); }
+        },HttpThread.POST,null).start();
+        while (!status.isOk()&&!status.isError()){}
+        boolean is=false;
+        System.out.println(status.getResponse());
+        if (status.isOk())is="response:yes".equals(status.getResponse());
+        return is;
+    }
+
+    public static void getADImagesURLListFile2Local(Listener listener){
+        String path=CommonUtils.getDiskCachePath() +"/img-url-list.temp";
+        String url=CommonUtils.SERVERADDRESS +"/getADImagesURLListFile";
+        new HttpThread(url,listener, path, DOWNLOAD_otherFile).start();
     }
 
     public interface Listener{
         void startFileTransfer();
         void success(String response);
-        void progress(int progress);
         void error(Exception e);
-    }
-    public interface DownloadListener extends Listener{
-        void success(File file);
     }
     private static class CheckStatus{
         private boolean ok=false;
@@ -134,15 +110,11 @@ public class HttpUtils {
         boolean isOk() {
             return ok;
         }
-        void setOk(boolean ok) {
-            this.ok = ok;
-        }
+        void OK(){this.ok=true;}
         boolean isError() {
             return error;
         }
-        void setError(boolean error) {
-            this.error = error;
-        }
+        void ERROR(){this.error=true;}
         String getResponse() {
             return response;
         }

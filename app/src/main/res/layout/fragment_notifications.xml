@@ -99,12 +99,6 @@
         android:layout_height="wrap_content"
         android:gravity="center_horizontal">
         <Button
-            android:id="@+id/doUploadBtn"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="备份到数据中心"
-            tools:ignore="ButtonStyle" />
-        <Button
             android:id="@+id/doDownloadBtn"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -112,9 +106,10 @@
             tools:ignore="ButtonStyle" />
         <Button
             android:id="@+id/doGetBtn"
+            android:layout_marginStart="20dp"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="get测试"
+            android:text="测试连接是否正常"
             tools:ignore="ButtonStyle" />
     </LinearLayout>
 

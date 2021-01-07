@@ -11,7 +11,10 @@ import android.content.res.Configuration;
 import android.content.res.Resources;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
 import android.text.TextUtils;
+import android.util.Base64;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -19,6 +22,7 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.hongxing.hxs.db.DBManager;
@@ -28,10 +32,12 @@ import com.hongxing.hxs.ui.dashboard.DashboardFragment;
 import com.hongxing.hxs.ui.dialog.MyDialog;
 import com.hongxing.hxs.utils.CommonUtils;
 import com.hongxing.hxs.utils.ToastUtil;
+import com.hongxing.hxs.utils.http.HttpUtils;
 import com.huawei.hms.hmsscankit.ScanUtil;
 import com.huawei.hms.ml.scan.HmsScan;
 import com.huawei.hms.ml.scan.HmsScanAnalyzerOptions;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.navigation.NavController;
@@ -41,6 +47,8 @@ import androidx.navigation.ui.NavigationUI;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -55,34 +63,36 @@ public class MainActivity extends AppCompatActivity {
     public static File showPIC=null;
     public static String APPStoragePath;
     private static Context appContext;
+    public static long db_lastModified;
+    public static boolean isAdmin;
+    Handler handler;
 
-    @SuppressLint("WrongConstant")
+    @SuppressLint({"WrongConstant", "HandlerLeak"})
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-        BottomNavigationView navView = findViewById(R.id.nav_view);
-        // Passing each menu ID as a set of Ids because each
-        // menu should be considered as top level destinations.
-        AppBarConfiguration appBarConfiguration = new AppBarConfiguration.Builder(
-                R.id.navigation_home, R.id.navigation_dashboard, R.id.navigation_notifications)
-                .build();
-        NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment);
-        NavigationUI.setupActionBarWithNavController(this, navController, appBarConfiguration);
-        NavigationUI.setupWithNavController(navView, navController);
+        AlertDialog.Builder builder= new AlertDialog.Builder(this,R.style.Dialog_Fullscreen);
+        final Dialog dialog= builder.create();dialog.setCancelable(false);
+        dialog.show();dialog.getWindow().setContentView(R.layout.initialization_page);
+        handler = new Handler() {
+            @Override
+            public void handleMessage(@NonNull Message msg) { super.handleMessage(msg);
+                if (msg.what==0x00) dialog.cancel();
+            }
+        };
+//        setContentView(R.layout.activity_main);
+////        BottomNavigationView navView = findViewById(R.id.nav_view);
+////        // Passing each menu ID as a set of Ids because each
+////        // menu should be considered as top level destinations.
+////        AppBarConfiguration appBarConfiguration = new AppBarConfiguration.Builder(
+////                R.id.navigation_home, R.id.navigation_dashboard, R.id.navigation_notifications)
+////                .build();
+////        NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment);
+////        NavigationUI.setupActionBarWithNavController(this, navController, appBarConfiguration);
+////        NavigationUI.setupWithNavController(navView, navController);
         appContext=getApplicationContext();
         APPStoragePath= CommonUtils.getAPPStoragePath(appContext);
-        DBManager.openDatabase(this).close();
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            this.requestPermissions(
-                    new String[]{
-                            Manifest.permission.CAMERA,
-                            Manifest.permission.READ_EXTERNAL_STORAGE,
-                            Manifest.permission.WRITE_EXTERNAL_STORAGE,
-                            Manifest.permission.READ_PHONE_STATE,
-                            Manifest.permission.INTERNET},
-                    0X03);
-        }
+        checkPermissions();
     }
 
     @Override
@@ -90,6 +100,14 @@ public class MainActivity extends AppCompatActivity {
         MenuInflater inflater = getMenuInflater();
         inflater.inflate(R.menu.scan_btn, menu);//引用menu布局文件R.menu.scan_btn
         return true;
+    }
+
+    @Override
+    public boolean onPrepareOptionsMenu(Menu menu) {
+//        MenuItem item = menu.findItem(R.menu.scan_btn);
+//        if (item.isEnabled())item.setEnabled(false);
+//        else item.setEnabled(true);
+        return super.onPrepareOptionsMenu(menu);
     }
 
     @Override
@@ -102,6 +120,61 @@ public class MainActivity extends AppCompatActivity {
             }
         }
         return super.onOptionsItemSelected(item);
+    }
+
+    private void init(){
+        CommonUtils.checkRequiredFolder();//检查必要文件夹
+        DBManager.openDatabase(this).close();//检查是否已有DB文件
+        setContentView(R.layout.activity_main);
+        BottomNavigationView navView = findViewById(R.id.nav_view);
+        // Passing each menu ID as a set of Ids because each
+        // menu should be considered as top level destinations.
+        AppBarConfiguration appBarConfiguration = new AppBarConfiguration.Builder(
+                R.id.navigation_home, R.id.navigation_dashboard, R.id.navigation_notifications)
+                .build();
+        NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment);
+        NavigationUI.setupActionBarWithNavController(this, navController, appBarConfiguration);
+        NavigationUI.setupWithNavController(navView, navController);
+        handler.sendEmptyMessageDelayed(0x00,800);
+        isAdmin= HttpUtils.isAdmin();//从服务器检查，是否是管理员
+        if (!isAdmin)return;//是管理员 则定时检查DB文件 有改动则上传至服务器
+        db_lastModified= DBManager.db_file.lastModified();
+//        Handler handler=new Handler();
+        Runnable runnable=new Runnable(){
+            @Override
+            public void run() {
+                long length = DBManager.db_file.lastModified();
+                if (length-db_lastModified > 1000){
+                    HttpUtils.uploadDBFile(new HttpUtils.Listener() {
+                        @Override
+                        public void startFileTransfer() { }
+                        @Override
+                        public void success(String response) {
+                            System.out.println(response);
+                        }
+                        @Override
+                        public void error(Exception e) {
+                            e.printStackTrace();
+                        }
+                    });
+                    db_lastModified=length;
+                }
+                handler.postDelayed(this, 10000);
+            }
+        };
+        handler.postDelayed(runnable, 10000);
+    }
+    private void checkPermissions(){
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            this.requestPermissions(
+                    new String[]{
+                            Manifest.permission.CAMERA,
+                            Manifest.permission.READ_EXTERNAL_STORAGE,
+                            Manifest.permission.WRITE_EXTERNAL_STORAGE,
+//                            Manifest.permission.READ_PHONE_STATE,
+                            Manifest.permission.INTERNET},
+                    0X03);
+        }
     }
 
     @Override
@@ -118,19 +191,22 @@ public class MainActivity extends AppCompatActivity {
         return appContext;
     }
 
-    /*开始扫码*/
-//    public void btnScanClick(View v){
-//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-//            this.requestPermissions(
-//                    new String[]{Manifest.permission.CAMERA, Manifest.permission.READ_EXTERNAL_STORAGE},
-//                    DEFAULT_VIEW);
-//        }
-//    }
-
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
-        if (permissions == null || grantResults == null || grantResults.length < 2 || grantResults[0] != PackageManager.PERMISSION_GRANTED || grantResults[1] != PackageManager.PERMISSION_GRANTED) {
-            return;
+        if (requestCode == 0x03) {
+            if (grantResults.length < 4 || grantResults[0] != PackageManager.PERMISSION_GRANTED||
+                grantResults[1] != PackageManager.PERMISSION_GRANTED||
+                grantResults[2] != PackageManager.PERMISSION_GRANTED||
+                grantResults[3] != PackageManager.PERMISSION_GRANTED) {
+                ToastUtil.showLongToastCenter("为确保软件正常使用，请授权相关权限");
+                TimerTask task = new TimerTask() {
+                    @Override
+                    public void run() {
+                        checkPermissions();
+                    }
+                };
+                timer.schedule(task, 2000);
+            }else init();
         }
         if (requestCode == DEFAULT_VIEW) {
             //start ScankitActivity for scanning barcode
@@ -227,8 +303,7 @@ public class MainActivity extends AppCompatActivity {
             if (!isQuit) {
                 isQuit = true;
                 ToastUtil.showShortToast("再按一次返回键退出");
-                TimerTask task = null;
-                task = new TimerTask() {
+                TimerTask task = new TimerTask() {
                     @Override
                     public void run() {
                         isQuit = false;

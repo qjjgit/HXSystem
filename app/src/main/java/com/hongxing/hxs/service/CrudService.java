@@ -4,15 +4,19 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 
+import com.hongxing.hxs.MainActivity;
 import com.hongxing.hxs.db.DBManager;
 import com.hongxing.hxs.entity.Goods;
 import com.hongxing.hxs.entity.PurchaseOrder;
+import com.hongxing.hxs.utils.http.HttpUtils;
+
 import java.io.File;
 import java.util.ArrayList;
 
 public class CrudService {
 //    private DatabaseHelper databaseHelper;
     private SQLiteDatabase db;
+    private boolean isModifiedOperation=false;
     public CrudService(Context context) {
 //        databaseHelper=new DatabaseHelper(context);
         db=DBManager.openDatabase(context);
@@ -20,29 +24,43 @@ public class CrudService {
     public void close(){
         if (db.isOpen())
             db.close();
+        if (MainActivity.isAdmin&&isModifiedOperation){
+            HttpUtils.uploadDBFile(new HttpUtils.Listener() {
+                @Override
+                public void startFileTransfer() { }
+                @Override
+                public void success(String response) {
+                    System.out.println(response);
+                }
+                @Override
+                public void error(Exception e) {
+                    e.printStackTrace();
+                }
+            });
+        }
     }
     public void execute(String sql){
         db.execSQL(sql);
     }
 
-    public String getDeviceID(){
-        String sql="select deviceID from system";
-        Cursor cursor = db.rawQuery(sql, null);
-        cursor.moveToNext();
-        return cursor.getString(cursor.getColumnIndex("deviceID"));
-    }
-    public void saveDeviceID(String id){
-        String sql="update system set deviceID=\""+id+"\"";
-        db.execSQL(sql);
-    }
+//    public String getDeviceID(){
+//        String sql="select deviceID from system";
+//        Cursor cursor = db.rawQuery(sql, null);
+//        cursor.moveToNext();
+//        return cursor.getString(cursor.getColumnIndex("deviceID"));
+//    }
+//    public void saveDeviceID(String id){
+//        String sql="update system set deviceID=\""+id+"\"";
+//        db.execSQL(sql);
+//    }
 
     //增加数据的方法
     public void saveGoods(Goods goods){
-//        SQLiteDatabase db= DBManager.openDatabase()//获取数据实体//写方法//会判断是否数据库已经满了
         String sql="insert into goodsdata('name','barcode','unit','price','orig') values(?,?,?,?,?)";
 //        byte[] bytes = goods.getName().getBytes();
 //        String name = new String(bytes, "GBK");
         db.execSQL(sql, new Object[]{goods.getName(),goods.getBarcode(),goods.getUnit(),goods.getPrice(),goods.getOrig()});//执行sql语句？由数组提供
+        isModifiedOperation=true;
     }
 
     //增加进货单
@@ -61,6 +79,7 @@ public class CrudService {
                 }
             }
             db.setTransactionSuccessful();
+            isModifiedOperation=true;
         }finally {
             db.endTransaction();
         }
@@ -94,6 +113,7 @@ public class CrudService {
             File cache = new File(purO.getCachePath());
             if (cache.exists())cache.delete();
             db.setTransactionSuccessful();//声明事务成功
+            isModifiedOperation=true;
             return true;
         }catch (Exception e){
             return false;
@@ -107,13 +127,14 @@ public class CrudService {
         String sql = "update goodsdata set name=?,barcode=? ,unit=?,price=?,orig=? where id=?";
         db.execSQL(sql,new Object[]{
                 goods.getName(),goods.getBarcode(),goods.getUnit(),goods.getPrice(),goods.getOrig(),goods.getId()});
+        isModifiedOperation=true;
     }
 
     //更新进货单
     public void updatePurOrder(PurchaseOrder pur){
         String sql="update pur_order set supplier=\""+pur.getSupplier()+"\","
                     +"date=\""+pur.getDate()+"\" where id=\""+pur.getId()+"\"";
-        db.execSQL(sql);
+        db.execSQL(sql);isModifiedOperation=true;
     }
 
     //是否存在 name和unit的商品
@@ -192,6 +213,7 @@ public class CrudService {
                     db.execSQL(sql,new Object[]{id});
                 }
             }
+            isModifiedOperation=true;
             db.setTransactionSuccessful();
             return true;
         }catch (Exception e){
@@ -277,6 +299,7 @@ public class CrudService {
             String sql="delete from goods_pur_o where pur_id=\""+pur.getId()+"\" and goods_id=?";
             db.execSQL(sql,new Object[]{goods.getId()});
             db.setTransactionSuccessful();
+            isModifiedOperation=true;
             return true;
         }catch (Exception e){
             return false;
@@ -295,6 +318,7 @@ public class CrudService {
                 String sql="insert into goods_pur_o('goods_id','pur_id') values(?,\""+pur.getId()+"\")";
                 db.execSQL(sql,new Object[]{goods_id});
             }
+            isModifiedOperation=true;
             db.setTransactionSuccessful();
             return true;
         }catch (Exception e){
