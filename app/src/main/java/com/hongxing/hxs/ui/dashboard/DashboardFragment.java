@@ -660,6 +660,7 @@ public class DashboardFragment extends Fragment {
                                 String form="fileName="+pur.getFileName();
                                 connection = HttpUtils.getDoGetConnection(
                                         new URL(CommonUtils.SERVERADDRESS + "/getThumbnail?" + form));
+                                connection.connect();
                                 if (connection.getResponseCode()==200)
                                     bitmap=BitmapFactory.decodeStream(connection.getInputStream());
                             } catch (Exception e) {
@@ -852,6 +853,7 @@ public class DashboardFragment extends Fragment {
                     String form="fileName="+purchaseOrder.getFileName();
                     connection = HttpUtils.getDoGetConnection(
                             new URL(CommonUtils.SERVERADDRESS + "/getImg?" + form));
+                    connection.connect();
                     if (connection.getResponseCode()==200){
                         origBM.set(BitmapFactory.decodeStream(connection.getInputStream()));
                         pngBM.set(BitmapUtil.proportionalScaleBitmap(origBM.get(),metrics.widthPixels));

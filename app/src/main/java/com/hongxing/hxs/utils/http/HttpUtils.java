@@ -62,19 +62,6 @@ public class HttpUtils {
                 listener,path).start();
     }
 
-    public static HttpURLConnection getDoGetConnection(URL url) throws IOException {
-        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-        connection.setRequestMethod("GET");
-        connection.setDoInput(true);
-        connection.setDoOutput(false);
-        connection.setUseCaches(false);
-        connection.setConnectTimeout(5000);
-        connection.setReadTimeout(5000);
-        connection.setRequestProperty("deviceID", CommonUtils.getDeviceID());
-        connection.connect();
-        return connection;
-    }
-
     public static boolean isAdmin(){
         CheckStatus status = new CheckStatus();
         new HttpThread(CommonUtils.SERVERADDRESS+"/checkAdmin", new Listener() {
@@ -91,11 +78,39 @@ public class HttpUtils {
         if (status.isOk())is="response:yes".equals(status.getResponse());
         return is;
     }
+    public static void checkNewestVersion(Listener listener){
+        listener.startFileTransfer();
+        new HttpThread(CommonUtils.SERVERADDRESS+"/newestAPPVersion",listener,HttpThread.POST,null).start();
+    }
 
     public static void getADImagesURLListFile2Local(Listener listener){
         String path=CommonUtils.getDiskCachePath() +"/img-url-list.temp";
         String url=CommonUtils.SERVERADDRESS +"/getADImagesURLListFile";
         new HttpThread(url,listener, path, DOWNLOAD_otherFile).start();
+    }
+
+    /**
+     * @Description: 获取 url 连接
+     * @param: @param urlLocation
+     * @param: @return HttpURLConnection实例化对象
+     * @param: @throws IOException
+     */
+    public static HttpURLConnection getDoGetConnection(URL url) throws IOException {
+        return getHttpConnection(url);
+    }
+    public static HttpURLConnection getDoGetConnection(String url_str) throws IOException {
+        return getHttpConnection(new URL(url_str));
+    }
+    private static HttpURLConnection getHttpConnection(URL url) throws IOException {
+        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+        connection.setRequestMethod("GET");
+        connection.setDoInput(true);
+        connection.setDoOutput(false);
+        connection.setUseCaches(false);
+        connection.setConnectTimeout(5000);
+        connection.setReadTimeout(7000);
+        connection.setRequestProperty("deviceID", CommonUtils.getDeviceID());
+        return connection;
     }
 
     public interface Listener{

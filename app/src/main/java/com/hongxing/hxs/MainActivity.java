@@ -63,7 +63,6 @@ public class MainActivity extends AppCompatActivity {
     public static File showPIC=null;
     public static String APPStoragePath;
     private static Context appContext;
-    public static long db_lastModified;
     public static boolean isAdmin;
     Handler handler;
 
@@ -138,13 +137,13 @@ public class MainActivity extends AppCompatActivity {
         handler.sendEmptyMessageDelayed(0x00,800);
         isAdmin= HttpUtils.isAdmin();//从服务器检查，是否是管理员
         if (!isAdmin)return;//是管理员 则定时检查DB文件 有改动则上传至服务器
-        db_lastModified= DBManager.db_file.lastModified();
+        DBManager.db_lastModified= DBManager.db_file.lastModified();
 //        Handler handler=new Handler();
         Runnable runnable=new Runnable(){
             @Override
             public void run() {
-                long length = DBManager.db_file.lastModified();
-                if (length-db_lastModified > 1000){
+                long now = DBManager.db_file.lastModified();
+                if (now - DBManager.db_lastModified > 1000){
                     HttpUtils.uploadDBFile(new HttpUtils.Listener() {
                         @Override
                         public void startFileTransfer() { }
@@ -157,7 +156,7 @@ public class MainActivity extends AppCompatActivity {
                             e.printStackTrace();
                         }
                     });
-                    db_lastModified=length;
+                    DBManager.db_lastModified=now;
                 }
                 handler.postDelayed(this, 10000);
             }

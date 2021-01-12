@@ -26,7 +26,7 @@ public class ScreenUtil {
      * @param context 上下文
      * @return density 屏幕 density
      */
-    public static float getDeviceDensity(Context context){
+    static float getDeviceDensity(Context context){
         DisplayMetrics metrics = new DisplayMetrics();
         WindowManager windowManager = (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
         windowManager.getDefaultDisplay().getMetrics(metrics);

@@ -20,6 +20,7 @@ public class DBManager {
     private static String pathStr =MainActivity.APPStoragePath+File.separator+"databases";
 
     public static File db_file=new File(pathStr+File.separator+DB_NAME);
+    public static long db_lastModified;
 
     public static SQLiteDatabase openDatabase(Context context){
 
@@ -42,7 +43,7 @@ public class DBManager {
             }
             createDBFile(context);
             initDBData(context);
-            db_file.setLastModified(0);
+            db_file.setLastModified(10);
             //如果没有这个数据库  我们已经把他写到SD卡上了，然后在执行一次这个方法 就可以返回数据库了
             return openDatabase(context);
         }

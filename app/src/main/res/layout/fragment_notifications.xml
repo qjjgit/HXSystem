@@ -94,6 +94,7 @@
                 app:layout_constraintTop_toTopOf="parent" />
         </androidx.constraintlayout.widget.ConstraintLayout>
     </LinearLayout>
+    <!--  同步、测试连接  -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -112,5 +113,29 @@
             android:text="测试连接是否正常"
             tools:ignore="ButtonStyle" />
     </LinearLayout>
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <TextView
+            android:id="@+id/text_versionCode"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="10dp"
+            android:text="版本号："
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent" />
+
+        <TextView
+            android:id="@+id/btn_check_for_update"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:text="检查更新"
+            android:textColor="#2196F3"
+            app:layout_constraintBottom_toBottomOf="@+id/text_versionCode"
+            app:layout_constraintStart_toEndOf="@+id/text_versionCode" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
 </LinearLayout>

@@ -1,12 +1,11 @@
 package com.hongxing.hxs.utils;
 
-import android.annotation.SuppressLint;
 import android.content.Context;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
 import android.os.Environment;
 
 import androidx.annotation.NonNull;
-
-import com.hongxing.hxs.MainActivity;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -15,18 +14,34 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.util.UUID;
 
+import static com.hongxing.hxs.MainActivity.APPStoragePath;
+
 public class CommonUtils {
+    private static String versionName;
     public static String SERVERADDRESS=
-            //"http://192.168.1.11:8080/hx_goods_system";
+            //"http://192.168.1.3:8080/hx_goods_system";
             "http://3579h68942.oicp.vip";
 
+    public static String getVersionName(Context context) {
+        if (versionName!=null)return versionName;
+        PackageManager manager = context.getPackageManager();
+        try {
+            PackageInfo info = manager.getPackageInfo(context.getPackageName(), 0);
+            versionName = info.versionName;
+        } catch (PackageManager.NameNotFoundException e) {
+            e.printStackTrace();
+        }
+        return versionName;
+    }
+
+    //android/data/packageName/files
     public static String getAPPStoragePath(@NonNull Context context){
         return context.getExternalFilesDir(null).getPath();
     }
 
     public static void checkRequiredFolder(){
         new Thread(()->{
-            String appPath=MainActivity.APPStoragePath;
+            String appPath=APPStoragePath;
             File file;String[] list={"/cache","/databases","/PurchaseOrder"};
             for (String dir : list) {
                 file=new File(appPath + dir);
@@ -39,13 +54,13 @@ public class CommonUtils {
     }
 
     /**
-     * 获取cache路径
+     * 获取cache路径    android/data/packageName/files/cache
      * //@param context context
      * @return string
      */
     public static String getDiskCachePath(/*@NonNull Context context*/) {
         //自定义缓存目录
-        String path = MainActivity.APPStoragePath + File.separator + "cache";
+        String path = APPStoragePath + File.separator + "cache";
         File file = new File(path);if (!file.exists())file.mkdirs();
         return path;
 
@@ -88,37 +103,7 @@ public class CommonUtils {
         return deviceID;
     }
 
-    @SuppressLint({"MissingPermission", "HardwareIds"})
     private static String createDeviceID(){
-//        String id=null;
-//        TelephonyManager mt = (TelephonyManager) Objects.requireNonNull(context).getSystemService(Context.TELEPHONY_SERVICE);
-//        if (Build.VERSION.SDK_INT>=Build.VERSION_CODES.O) {
-//            if (mt != null) {
-//                String temp;
-//                try {
-//                    temp=mt.getMeid();
-//                } catch (Exception e) {
-//                    try {
-//                        temp=mt.getImei();
-//                    } catch (Exception ex) {
-//                        try {
-//                            temp=mt.getDeviceId();
-//                        }catch (Exception ey){
-//                            temp=null;
-//                        }
-//                    }
-//                }
-//                if (temp==null)id=UUID.randomUUID().toString();
-//                else id= UUID.nameUUIDFromBytes(temp.getBytes()).toString();
-//            }
-//        }else {
-//            if (mt != null) {
-//                id= UUID.nameUUIDFromBytes(mt.getDeviceId().getBytes()).toString();
-//            }
-//        }
-//        if (id != null) id=id.replaceAll("-","");
-//        CrudService service = new CrudService(context);
-//        service.saveDeviceID(id);service.close();
         String[] chars = new String[] { "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n",
                 "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "0", "1", "2", "3", "4", "5", "6", "7", "8",
                 "9", "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T",

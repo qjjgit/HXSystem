@@ -143,7 +143,7 @@ public class HttpThread extends Thread{
                         if (db.delete()) file.renameTo(db);
                         listener.success("同步完成!");
                     }else listener.success("getADImagesURLListFile ok");
-                }else listener.success("response:"+getResponse());
+                }else listener.success(getResponse());
             }else if(responseCode==205){
                 String msg = connection.getHeaderField("msg");
                 if ("no backup".equals(msg))msg="您未进行过备份";

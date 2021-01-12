@@ -22,7 +22,6 @@ import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
 import androidx.core.content.FileProvider;
 import androidx.fragment.app.Fragment;
-import androidx.lifecycle.ViewModelProviders;
 
 import com.hongxing.hxs.MainActivity;
 import com.hongxing.hxs.R;
@@ -30,6 +29,7 @@ import com.hongxing.hxs.db.DBManager;
 import com.hongxing.hxs.service.CrudService;
 import com.hongxing.hxs.utils.CommonUtils;
 import com.hongxing.hxs.utils.ToastUtil;
+import com.hongxing.hxs.utils.download.FileDownloadUtil;
 import com.hongxing.hxs.utils.http.HttpUtils;
 import com.hongxing.hxs.utils.zip.CompressListener;
 import com.hongxing.hxs.utils.zip.ZIPUtils;
@@ -39,9 +39,7 @@ import java.io.File;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.Locale;
-import java.util.Map;
 
 import static android.app.Activity.RESULT_OK;
 
@@ -62,25 +60,56 @@ public class NotificationsFragment extends Fragment {
             @Override
             public void handleMessage(@NonNull Message msg) {
                 super.handleMessage(msg);
-                //上传初始化 not used
+                //开始检测新版本
                 if (msg.what==0x05){
+                    progressDialog.setTitle("正在检查系统版本……");
+                    progressDialog.setIndeterminate(true);
+                    progressDialog.setCancelable(false);
+                    progressDialog.show();
+                }
+                //已经是最新版
+                if (msg.what==0x09){
+                    ToastUtil.showShortToast("已经是最新版本!");
+                    if (progressDialog.isShowing())progressDialog.cancel();
+                }
+                //检测到新版本
+                if (msg.what==0x12){
+                    ToastUtil.showShortToast("检测到新版本!");
+                    if (progressDialog.isShowing())progressDialog.cancel();
+                    final AlertDialog.Builder alterDialog = new AlertDialog.Builder(context);
+                    alterDialog.setCancelable(true);
+                    alterDialog.setIcon(R.drawable.update_ico32);//图标
+                    alterDialog.setTitle(" 系统更新");//文字
+                    alterDialog.setPositiveButton("  更  新", (dialog, which) ->{
+                        downloadAPK();
+                    });
+                    alterDialog.setNegativeButton("暂不更新  ",(dialog,which)->{});
+                    alterDialog.show();
+                }
+                //开始下载新版本
+                if (msg.what==0x13){
+                    progressDialog = new ProgressDialog(context);
                     progressDialog.setProgress(0);
                     progressDialog.setCancelable(false);
-                    progressDialog.setTitle("数据上传中……");
+                    progressDialog.setTitle("正在获取新版本…");
                     progressDialog.setMax(100);
-                    progressDialog.setIcon(R.drawable.data_ico32);
+                    progressDialog.setIcon(R.drawable.update_ico32);
                     progressDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
                     progressDialog.show();
                 }
-                //下载初始化 not used
-                if (msg.what==0x12){
+                //新版本下载完成
+                if (msg.what==0x10){
+                    Toast.makeText(context,
+                            "新版本下载完成!\n安装包在\"鸿兴超市\"文件夹内\n请到文件管理,手动安装新版本!",
+                            Toast.LENGTH_LONG).show();
+                    progressDialog.cancel();
                     progressDialog.setProgress(0);
-                    progressDialog.setCancelable(false);
-                    progressDialog.setTitle("正在从数据中心获取数据……");
-                    progressDialog.setMax(100);
-                    progressDialog.setIcon(R.drawable.data_ico32);
-                    progressDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
-                    progressDialog.show();
+                }
+                //下载速度
+                if (msg.what==0x11){
+                    Bundle data = msg.getData();
+                    String speed = data.getString("speed");
+                    progressDialog.setTitle("正在获取新版本… ("+speed+")");
                 }
                 //解压初始化
                 if (msg.what==0x14){
@@ -107,36 +136,6 @@ public class NotificationsFragment extends Fragment {
                 //解压失败
                 if (msg.what==0x08){
                     Toast.makeText(context, "数据导入失败!", Toast.LENGTH_LONG).show();
-                    progressDialog.cancel();
-                    progressDialog.setProgress(0);
-                }
-                //下载数据成功，开始解压 not used
-                if (msg.what==0x09){
-                    Toast.makeText(context, "数据获取完成，开始导入!", Toast.LENGTH_SHORT).show();
-                    progressDialog.cancel();
-                    progressDialog.setProgress(0);
-                }
-                //下载失败 not used
-                if (msg.what==0x11){
-                    Bundle data = msg.getData();
-                    String response = data.getString("response");
-                    Toast.makeText(context, response, Toast.LENGTH_LONG).show();
-                    progressDialog.cancel();
-                    progressDialog.setProgress(0);
-                }
-                //上传成功 not used
-                if (msg.what==0x13){
-                    Bundle data = msg.getData();
-                    String response = data.getString("response");
-                    Toast.makeText(context, response, Toast.LENGTH_LONG).show();
-                    progressDialog.cancel();
-                    progressDialog.setProgress(0);
-                }
-                //上传失败 not used
-                if (msg.what==0x10){
-                    Bundle data = msg.getData();
-                    String response = data.getString("response");
-                    Toast.makeText(context, response, Toast.LENGTH_LONG).show();
                     progressDialog.cancel();
                     progressDialog.setProgress(0);
                 }
@@ -200,8 +199,9 @@ public class NotificationsFragment extends Fragment {
             }
         };
         setClick(root);
+        ((TextView)root.findViewById(R.id.text_versionCode)).append(CommonUtils.getVersionName(context));
         lastBackup = root.findViewById(R.id.text_lastBackup);
-        CrudService service = new CrudService(getContext());
+        CrudService service = new CrudService(context);
         String date = service.getLastBackup();service.close();
         lastBackup.append(date);
         return root;
@@ -212,7 +212,7 @@ public class NotificationsFragment extends Fragment {
         final String strdir = CommonUtils.getBackupPath();
         SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd.HH.mm", Locale.CHINA);
         //做备份
-        view.findViewById(R.id.btn_exportData).setOnClickListener(v -> {
+        view.findViewById(R.id.btn_exportData).setOnClickListener(m -> {
             try {
                 Date date = format.parse(lastBackup.getText().toString().replace("上一次备份：", ""));
                 long l = new Date().getTime() - date.getTime();
@@ -278,7 +278,7 @@ public class NotificationsFragment extends Fragment {
             alterDialog.show();
         });
         //导入数据
-        view.findViewById(R.id.btn_importData).setOnClickListener(v -> {
+        view.findViewById(R.id.btn_importData).setOnClickListener(m -> {
             final AlertDialog.Builder alterDialog = new AlertDialog.Builder(context);
             alterDialog.setCancelable(true);
             alterDialog.setIcon(R.drawable.data_ico32);//图标
@@ -348,7 +348,7 @@ public class NotificationsFragment extends Fragment {
         //同步
         View syncBtn = view.findViewById(R.id.doDownloadBtn);
         if (!MainActivity.isAdmin)
-            syncBtn.setOnClickListener(a->{
+            syncBtn.setOnClickListener(m->{
             HttpUtils.downloadFile(HttpUtils.fromADMIN,new HttpUtils.Listener() {
                 @Override
                 public void startFileTransfer() {
@@ -403,6 +403,29 @@ public class NotificationsFragment extends Fragment {
 //            });
         });
         else syncBtn.setEnabled(false);
+        //检查更新
+        view.findViewById(R.id.btn_check_for_update).setOnClickListener(m->{
+            HttpUtils.checkNewestVersion(new HttpUtils.Listener() {
+                @Override
+                public void startFileTransfer() {
+                    handler.sendEmptyMessage(0x05);
+                }
+                @Override
+                public void success(String newestVersion) {
+                    String localVersion = CommonUtils.getVersionName(context);
+                    if (localVersion.equals(newestVersion)) {
+                        handler.sendEmptyMessageDelayed(0x09,600);
+                    }else{
+                        handler.sendEmptyMessageDelayed(0x12,600);
+                    }
+                }
+                @Override
+                public void error(Exception e) {
+                    e.printStackTrace();
+                }
+            });
+
+        });
     }
 
     @Override
@@ -458,6 +481,41 @@ public class NotificationsFragment extends Fragment {
             @Override
             public void zipFail() {
                 handler.sendEmptyMessage(0x08);
+            }
+        });
+    }
+
+    private void downloadAPK(){
+        FileDownloadUtil.downloadNewestAPK(new FileDownloadUtil.Listener() {
+            @Override
+            public void startDownload() {
+                handler.sendEmptyMessage(0x13);
+            }
+            @Override
+            public void progress(double progress) {
+                Bundle bundle = new Bundle();
+                bundle.putInt("progress", (int)progress);
+                Message msg = new Message();
+                msg.what =0x07;
+                msg.setData(bundle);
+                handler.sendMessage(msg);
+            }
+            @Override
+            public void now_speed(String speed) {
+                Bundle bundle = new Bundle();
+                bundle.putString("speed", speed);
+                Message msg = new Message();
+                msg.what =0x11;
+                msg.setData(bundle);
+                handler.sendMessage(msg);
+            }
+            @Override
+            public void success() {
+                handler.sendEmptyMessage(0x10);
+            }
+            @Override
+            public void error(Exception e) {
+                e.printStackTrace();
             }
         });
     }
